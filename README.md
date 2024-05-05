@@ -4,7 +4,6 @@ Clone inside homework folder (cs225a/homework)
 
 Edit CMakeLists.txt inside homework folder to:
 
-# homework folder
 set(HW_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}")
 add_definitions(-DHW_FOLDER="${HW_FOLDER}")
 
