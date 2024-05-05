@@ -142,31 +142,18 @@ int main(int argc, char** argv) {
         eve_Lambda = eve->taskInertiaMatrix(eve_Jv);
         eve_J_bar = eve->dynConsistentInverseJacobian(eve_Jv);
         eve_N = eve->nullspaceMatrix(eve_Jv);
-
-        // ---------------------------  PROJECT ---------------------------------------
         
         // **********************
         // CONTROL WALLE & EVE CODE HERE
         // **********************
 
+        double kp = 10.0;      // chose your p gain
+        double kv = 1.0;      // chose your d gain
+
         VectorXd q_desired = VectorXd::Zero(dof);
-        q_desired << 0, 0, 0, 0, 0, 0, 0;
+        q_desired << M_PI/2.0, -M_PI/4.0, 0.0, -125.0/180.0 * M_PI, 0.0, 80.0/180.0 * M_PI, 0.0;   // change to the desired robot joint angles for the question
 
-        Vector3d x_desired = Vector3d(0.3 + 0.1 * sin(M_PI * time), 0.1 + 0.1 * cos(M_PI * time), 0.5);
-        Vector3d x_dot_desired = Vector3d(0.1 * M_PI * cos(M_PI * time), -0.1 * M_PI * sin(M_PI * time), 0);
-        Vector3d x_ddot_desired = Vector3d(-0.1 * M_PI * M_PI * sin(M_PI * time), -0.1 * M_PI * M_PI * cos(M_PI * time), 0);
-
-        Vector3d ee_position = walle->position(link_name, pos_in_link);
-        Vector3d ee_velocity = walle->linearVelocity(link_name, pos_in_link);
-
-        double k_p = 100.0;
-        double k_v = 20.0;
-        double k_pj = 50.0;
-        double k_vj = 14.0;
-
-        // VectorXd F = Lambda * (-k_p * (ee_position - x_desired) - k_v * ee_velocity);
-        VectorXd F = walle_Lambda * (x_ddot_desired - k_p * (ee_position - x_desired) - k_v * (ee_velocity - x_dot_desired));
-        walle_control_torques = walle_Jv.transpose() * F + walle_N.transpose() * (-k_pj * (walle_q - q_desired) - k_vj * walle_dq) + walle->jointGravityVector();
+        walle_control_torques = walle->M() * (-kp * (walle_q - q_desired) - kv * walle_dq) + walle->jointGravityVector();
 
         // send to redis
         redis_client.sendAllFromGroup();

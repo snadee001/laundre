@@ -2,12 +2,12 @@
 
 <world name="demo_world" gravity="0.0 0.0 -9.81">
 
-	<robot name="Panda1">
+	<robot name="WALLE">
 		<origin xyz="0 -0.30 0" rpy="0 0 0" />
 		<model dir="${CS225A_URDF_FOLDER}/panda" path="panda_arm.urdf" name="panda" />
 	</robot>
 
-	<robot name="Panda2">
+	<robot name="EVE">
 		<origin xyz="0 0.30 0" rpy="0 0 0" />
 		<model dir="${CS225A_URDF_FOLDER}/panda" path="panda_arm.urdf" name="panda" />
 	</robot>
