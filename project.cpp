@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
         // **********************
 
         double kp = 10.0;      // chose your p gain
-        double kv = 1.0;      // chose your d gain
+        double kv = 5.0;      // chose your d gain
 
         VectorXd q_desired = VectorXd::Zero(dof);
         q_desired << M_PI/2.0, -M_PI/4.0, 0.0, -125.0/180.0 * M_PI, 0.0, 80.0/180.0 * M_PI, 0.0;   // change to the desired robot joint angles for the question
