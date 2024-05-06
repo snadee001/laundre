@@ -41,6 +41,9 @@ int main(int argc, char** argv) {
     auto walle = new Sai2Model::Sai2Model(robot_file);
     auto eve = new Sai2Model::Sai2Model(robot_file);
 
+    Vector3d eve_origin = Vector3d(0, 0.3, 0);
+    Vector3d walle_origin = Vector3d(0, -0.3, 0);
+
     // prepare controller
 	int dof = walle->dof();
 	const string link_name = "link7";
@@ -87,6 +90,9 @@ int main(int argc, char** argv) {
     redis_client.addToReceiveGroup(JOINT_ANGLES_EVE_KEY, eve_q);
     redis_client.addToReceiveGroup(JOINT_VELOCITIES_EVE_KEY, eve_dq);
 
+    MatrixXd box_pose = redis_client.getEigen(BOX_POSE_KEY);
+    redis_client.addToReceiveGroup(BOX_POSE_KEY, box_pose);
+
     redis_client.addToSendGroup(JOINT_TORQUES_COMMANDED_WALLE_KEY, walle_control_torques);
     redis_client.addToSendGroup(JOINT_TORQUES_COMMANDED_EVE_KEY, eve_control_torques);
     redis_client.addToSendGroup(GRAVITY_COMP_ENABLED_KEY, gravity_comp_enabled);
@@ -112,7 +118,7 @@ int main(int argc, char** argv) {
     Sai2Common::LoopTimer timer(control_freq);
 
     ofstream file;
-    file.open("../../homework/project/data_files/logger.txt");
+    file.open("../../homework/laundre/data_files/logger.txt");
 
     while (runloop) {
         // wait for next scheduled loop
@@ -149,11 +155,20 @@ int main(int argc, char** argv) {
 
         double kp = 10.0;      // chose your p gain
         double kv = 5.0;      // chose your d gain
+        double kvj = 2.0;
 
-        VectorXd q_desired = VectorXd::Zero(dof);
-        q_desired << M_PI/2.0, -M_PI/4.0, 0.0, -125.0/180.0 * M_PI, 0.0, 80.0/180.0 * M_PI, 0.0;   // change to the desired robot joint angles for the question
+        Vector3d xd = box_pose(seq(0,2), 3);
 
-        walle_control_torques = walle->M() * (-kp * (walle_q - q_desired) - kv * walle_dq) + walle->jointGravityVector();
+        Vector3d eve_x = eve->position(link_name, pos_in_link)+eve_origin;
+        Vector3d eve_v = eve_Jv*eve_dq;
+        Vector3d walle_x = walle->position(link_name, pos_in_link)+walle_origin;
+        Vector3d walle_v = walle_Jv*walle_dq;
+
+        Vector3d eve_F = eve->taskInertiaMatrix(eve_Jv)*(-1*kp*(eve_x-xd)-kv*eve_v);
+        eve_control_torques = eve_Jv.transpose()*eve_F+eve->jointGravityVector()-eve->nullspaceMatrix(eve_Jv).transpose()*eve->M()*(kvj*eve_dq);
+
+        Vector3d walle_F = walle->taskInertiaMatrix(walle_Jv)*(-1*kp*(walle_x-xd)-kv*walle_v);
+        walle_control_torques = walle_Jv.transpose()*walle_F+walle->jointGravityVector()-walle->nullspaceMatrix(walle_Jv).transpose()*walle->M()*(kvj*walle_dq);
 
         // send to redis
         redis_client.sendAllFromGroup();
