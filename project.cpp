@@ -27,7 +27,7 @@ using namespace std;
 using namespace Eigen;
 
 // config file names and object names
-const string robot_file = "${CS225A_URDF_FOLDER}/panda/panda_arm.urdf";
+const string robot_file = "${CS225A_URDF_FOLDER}/panda/panda_arm_hand.urdf";
 
 int main(int argc, char** argv) {
     Sai2Model::URDF_FOLDERS["CS225A_URDF_FOLDER"] = string(CS225A_URDF_FOLDER);
