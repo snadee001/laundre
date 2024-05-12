@@ -174,50 +174,13 @@ int main(int argc, char** argv) {
         eve->setDq(eve_dq);
         eve->updateModel();
 
-        // **********************
-        // WRITE YOUR CODE AFTER
-        // // **********************
-
-        // walle_Jv = walle->Jv(link_name, pos_in_link);
-        // walle_Lambda = walle->taskInertiaMatrix(walle_Jv);
-        // walle_J_bar = walle->dynConsistentInverseJacobian(walle_Jv);
-        // walle_N = walle->nullspaceMatrix(walle_Jv);
-
-        // eve_Jv = eve->Jv(link_name, pos_in_link);
-        // eve_Lambda = eve->taskInertiaMatrix(eve_Jv);
-        // eve_J_bar = eve->dynConsistentInverseJacobian(eve_Jv);
-        // eve_N = eve->nullspaceMatrix(eve_Jv);
-        
-        // // **********************
-        // // CONTROL WALLE & EVE CODE HERE
-        // // **********************
-
-        // double kp = 10.0;      // chose your p gain
-        // double kv = 5.0;      // chose your d gain
-        // double kvj = 2.0;
-        // double kpj = 5.0;
-
-        // Vector3d xd = box_pose(seq(0,2), 3);
-        // xd += Vector3d(0,0,-0.05);
-
-        // Vector3d eve_x = eve->position(link_name, pos_in_link)+eve_origin;
-        // Vector3d eve_v = eve_Jv*eve_dq;
-        // Vector3d walle_x = walle->position(link_name, pos_in_link)+walle_origin;
-        // Vector3d walle_v = walle_Jv*walle_dq;
-
-        // Vector3d eve_F = eve->taskInertiaMatrix(eve_Jv)*(-1*kp*(eve_x-xd)-kv*eve_v);
-        // eve_control_torques = eve_Jv.transpose()*eve_F+eve->jointGravityVector()-eve->nullspaceMatrix(eve_Jv).transpose()*eve->M()*(kvj*eve_dq+kpj*(eve_q - q_d));
-
-        // Vector3d walle_F = walle->taskInertiaMatrix(walle_Jv)*(-1*kp*(walle_x-xd)-kv*walle_v);
-        // VectorXd walle_null_control = walle->nullspaceMatrix(walle_Jv).transpose() * walle->M() * (-kvj * walle_dq + kpj * (q_d - walle_q));
-        // walle_control_torques = walle_Jv.transpose()*walle_F + walle->jointGravityVector() + walle_null_control;
-
         // update goals
         Vector3d x_desired = box_pose(seq(0,2), 3);
         x_desired += Vector3d(0,0,-0.05);
+        Vector3d box_spacing = Vector3d(0.0, 0.1, 0.0);
 
-        Vector3d walle_x_desired = x_desired - walle_origin;
-        Vector3d eve_x_desired = x_desired - eve_origin;
+        Vector3d walle_x_desired = x_desired - walle_origin - box_spacing;
+        Vector3d eve_x_desired = x_desired - eve_origin + box_spacing;
 
         walle_pose_task->setGoalPosition(walle_x_desired);
         // walle_pose_task->setGoalOrientation(AngleAxisd(M_PI / 6, Vector3d::UnitX()).toRotationMatrix() * ee_ori);
