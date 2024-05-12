@@ -9,6 +9,7 @@
 
 // sai2 main libraries includes
 #include "Sai2Model.h"
+#include "Sai2Primitives.h"
 
 // sai2 utilities from sai2-common
 #include "timer/LoopTimer.h"
@@ -25,6 +26,7 @@ void sighandler(int) { runloop = false; }
 // namespaces for compactness of code
 using namespace std;
 using namespace Eigen;
+using namespace Sai2Primitives;
 
 // config file names and object names
 const string robot_file = "${CS225A_URDF_FOLDER}/panda/panda_arm_hand.urdf";
@@ -38,42 +40,77 @@ int main(int argc, char** argv) {
     signal(SIGINT, &sighandler);
 
     // load robots
-    auto walle = new Sai2Model::Sai2Model(robot_file);
-    auto eve = new Sai2Model::Sai2Model(robot_file);
+    auto walle = std::make_shared<Sai2Model::Sai2Model>(robot_file);
+    auto eve = std::make_shared<Sai2Model::Sai2Model>(robot_file);
 
     Vector3d eve_origin = Vector3d(0, 0.3, 0);
     Vector3d walle_origin = Vector3d(0, -0.3, 0);
 
     // prepare controller
-	int dof = walle->dof();
-	const string link_name = "link7";
-	const Vector3d pos_in_link = Vector3d(0, 0, 0.15);
-	VectorXd walle_control_torques = VectorXd::Zero(dof);
-    VectorXd eve_control_torques = VectorXd::Zero(dof);
+	int dof = walle->dof(); // same as eve here
+	VectorXd walle_command_torques = VectorXd::Zero(dof);  // panda + gripper torques 
+	MatrixXd walle_N_prec = MatrixXd::Identity(dof, dof);
 
-	// model quantities for operational space control
-	MatrixXd walle_Jv = MatrixXd::Zero(3,dof);
-	MatrixXd walle_Lambda = MatrixXd::Zero(3,3);
-	MatrixXd walle_J_bar = MatrixXd::Zero(dof,3);
-	MatrixXd walle_N = MatrixXd::Zero(dof,dof);
+    VectorXd eve_command_torques = VectorXd::Zero(dof);
+    MatrixXd eve_N_prec = MatrixXd::Identity(dof, dof);
 
-    MatrixXd eve_Jv = MatrixXd::Zero(3,dof);
-	MatrixXd eve_Lambda = MatrixXd::Zero(3,3);
-	MatrixXd eve_J_bar = MatrixXd::Zero(dof,3);
-	MatrixXd eve_N = MatrixXd::Zero(dof,dof);
 
-	walle_Jv = walle->Jv(link_name, pos_in_link);
-	walle_Lambda = walle->taskInertiaMatrix(walle_Jv);
-	walle_J_bar = walle->dynConsistentInverseJacobian(walle_Jv);
-	walle_N = walle->nullspaceMatrix(walle_Jv);
+    // arm task (joints 0-6)
+    const string control_link = "link7";
+	const Vector3d control_point = Vector3d(0, 0, 0.07);
+	Affine3d compliant_frame = Affine3d::Identity();
+	compliant_frame.translation() = control_point;
 
-    eve_Jv = eve->Jv(link_name, pos_in_link);
-	eve_Lambda = eve->taskInertiaMatrix(eve_Jv);
-	eve_J_bar = eve->dynConsistentInverseJacobian(eve_Jv);
-	eve_N = eve->nullspaceMatrix(eve_Jv);
+	auto walle_pose_task = std::make_shared<Sai2Primitives::MotionForceTask>(walle, control_link, compliant_frame);
+	walle_pose_task->setPosControlGains(400, 40, 0);
+	walle_pose_task->setOriControlGains(400, 40, 0);
+
+    Vector3d walle_ee_pos;
+	Matrix3d walle_ee_ori;
+
+    auto eve_pose_task = std::make_shared<Sai2Primitives::MotionForceTask>(eve, control_link, compliant_frame);
+    eve_pose_task->setPosControlGains(400, 40, 0);
+    eve_pose_task->setOriControlGains(400, 40, 0);
+
+    Vector3d eve_ee_pos;
+    Matrix3d eve_ee_ori;
+
+
+    // gripper partial joint task (joints 7-8)
+    MatrixXd gripper_selection_matrix = MatrixXd::Zero(2, walle->dof());
+	gripper_selection_matrix(0, 7) = 1;
+	gripper_selection_matrix(1, 8) = 1;
+
+	double kp_gripper = 5e3;
+	double kv_gripper = 1e2;
+
+	auto walle_gripper_task = std::make_shared<Sai2Primitives::JointTask>(walle, gripper_selection_matrix);
+	walle_gripper_task->setDynamicDecouplingType(Sai2Primitives::DynamicDecouplingType::IMPEDANCE);
+	walle_gripper_task->setGains(kp_gripper, kv_gripper, 0);
+
+    auto eve_gripper_task = std::make_shared<Sai2Primitives::JointTask>(eve, gripper_selection_matrix);
+    eve_gripper_task->setDynamicDecouplingType(Sai2Primitives::DynamicDecouplingType::IMPEDANCE);
+    eve_gripper_task->setGains(kp_gripper, kv_gripper, 0);
+
+    // joint task for posture control
+    auto walle_joint_task = std::make_shared<Sai2Primitives::JointTask>(walle);
+
+    double kp_j = 400.0;
+    double kv_j = 40.0;
+	walle_joint_task->setGains(kp_j, kv_j, 0);
+
+	VectorXd q_desired(dof);
+	q_desired.head(7) << -30.0, -15.0, -15.0, -105.0, 0.0, 90.0, 45.0;
+	q_desired.head(7) *= M_PI / 180.0;
+	q_desired.tail(2) << 0.04, -0.04;
+	walle_joint_task->setGoalPosition(q_desired);
+
+    auto eve_joint_task = std::make_shared<Sai2Primitives::JointTask>(eve);
+    eve_joint_task->setGains(kp_j, kv_j, 0);
+    eve_joint_task->setGoalPosition(q_desired);
 
     // flag for enabling gravity compensation
-    bool gravity_comp_enabled = false;
+    bool gravity_comp_enabled = true;
 
     // start redis client
     auto redis_client = Sai2Common::RedisClient();
@@ -93,8 +130,8 @@ int main(int argc, char** argv) {
     MatrixXd box_pose = redis_client.getEigen(BOX_POSE_KEY);
     redis_client.addToReceiveGroup(BOX_POSE_KEY, box_pose);
 
-    redis_client.addToSendGroup(JOINT_TORQUES_COMMANDED_WALLE_KEY, walle_control_torques);
-    redis_client.addToSendGroup(JOINT_TORQUES_COMMANDED_EVE_KEY, eve_control_torques);
+    redis_client.addToSendGroup(JOINT_TORQUES_COMMANDED_WALLE_KEY, walle_command_torques);
+    redis_client.addToSendGroup(JOINT_TORQUES_COMMANDED_EVE_KEY, eve_command_torques);
     redis_client.addToSendGroup(GRAVITY_COMP_ENABLED_KEY, gravity_comp_enabled);
 
     redis_client.receiveAllFromGroup();
@@ -139,40 +176,73 @@ int main(int argc, char** argv) {
 
         // **********************
         // WRITE YOUR CODE AFTER
-        // **********************
+        // // **********************
 
-        walle_Jv = walle->Jv(link_name, pos_in_link);
-        walle_Lambda = walle->taskInertiaMatrix(walle_Jv);
-        walle_J_bar = walle->dynConsistentInverseJacobian(walle_Jv);
-        walle_N = walle->nullspaceMatrix(walle_Jv);
+        // walle_Jv = walle->Jv(link_name, pos_in_link);
+        // walle_Lambda = walle->taskInertiaMatrix(walle_Jv);
+        // walle_J_bar = walle->dynConsistentInverseJacobian(walle_Jv);
+        // walle_N = walle->nullspaceMatrix(walle_Jv);
 
-        eve_Jv = eve->Jv(link_name, pos_in_link);
-        eve_Lambda = eve->taskInertiaMatrix(eve_Jv);
-        eve_J_bar = eve->dynConsistentInverseJacobian(eve_Jv);
-        eve_N = eve->nullspaceMatrix(eve_Jv);
+        // eve_Jv = eve->Jv(link_name, pos_in_link);
+        // eve_Lambda = eve->taskInertiaMatrix(eve_Jv);
+        // eve_J_bar = eve->dynConsistentInverseJacobian(eve_Jv);
+        // eve_N = eve->nullspaceMatrix(eve_Jv);
         
-        // **********************
-        // CONTROL WALLE & EVE CODE HERE
-        // **********************
+        // // **********************
+        // // CONTROL WALLE & EVE CODE HERE
+        // // **********************
 
-        double kp = 10.0;      // chose your p gain
-        double kv = 5.0;      // chose your d gain
-        double kvj = 2.0;
-        double kpj = 5.0;
+        // double kp = 10.0;      // chose your p gain
+        // double kv = 5.0;      // chose your d gain
+        // double kvj = 2.0;
+        // double kpj = 5.0;
 
-        Vector3d xd = box_pose(seq(0,2), 3);
-        xd += Vector3d(0,0,-0.05);
+        // Vector3d xd = box_pose(seq(0,2), 3);
+        // xd += Vector3d(0,0,-0.05);
 
-        Vector3d eve_x = eve->position(link_name, pos_in_link)+eve_origin;
-        Vector3d eve_v = eve_Jv*eve_dq;
-        Vector3d walle_x = walle->position(link_name, pos_in_link)+walle_origin;
-        Vector3d walle_v = walle_Jv*walle_dq;
+        // Vector3d eve_x = eve->position(link_name, pos_in_link)+eve_origin;
+        // Vector3d eve_v = eve_Jv*eve_dq;
+        // Vector3d walle_x = walle->position(link_name, pos_in_link)+walle_origin;
+        // Vector3d walle_v = walle_Jv*walle_dq;
 
-        Vector3d eve_F = eve->taskInertiaMatrix(eve_Jv)*(-1*kp*(eve_x-xd)-kv*eve_v);
-        eve_control_torques = eve_Jv.transpose()*eve_F+eve->jointGravityVector()-eve->nullspaceMatrix(eve_Jv).transpose()*eve->M()*(kvj*eve_dq+kpj*(eve_q - q_d));
+        // Vector3d eve_F = eve->taskInertiaMatrix(eve_Jv)*(-1*kp*(eve_x-xd)-kv*eve_v);
+        // eve_control_torques = eve_Jv.transpose()*eve_F+eve->jointGravityVector()-eve->nullspaceMatrix(eve_Jv).transpose()*eve->M()*(kvj*eve_dq+kpj*(eve_q - q_d));
 
-        Vector3d walle_F = walle->taskInertiaMatrix(walle_Jv)*(-1*kp*(walle_x-xd)-kv*walle_v);
-        walle_control_torques = walle_Jv.transpose()*walle_F+walle->jointGravityVector()-walle->nullspaceMatrix(walle_Jv).transpose()*walle->M()*(kvj*walle_dq+kpj*(walle_q - q_d));
+        // Vector3d walle_F = walle->taskInertiaMatrix(walle_Jv)*(-1*kp*(walle_x-xd)-kv*walle_v);
+        // VectorXd walle_null_control = walle->nullspaceMatrix(walle_Jv).transpose() * walle->M() * (-kvj * walle_dq + kpj * (q_d - walle_q));
+        // walle_control_torques = walle_Jv.transpose()*walle_F + walle->jointGravityVector() + walle_null_control;
+
+        // update goals
+        Vector3d x_desired = box_pose(seq(0,2), 3);
+        x_desired += Vector3d(0,0,-0.05);
+
+        Vector3d walle_x_desired = x_desired - walle_origin;
+        Vector3d eve_x_desired = x_desired - eve_origin;
+
+        walle_pose_task->setGoalPosition(walle_x_desired);
+        // walle_pose_task->setGoalOrientation(AngleAxisd(M_PI / 6, Vector3d::UnitX()).toRotationMatrix() * ee_ori);
+        walle_gripper_task->setGoalPosition(Vector2d(0.02, -0.02));
+
+        eve_pose_task->setGoalPosition(eve_x_desired);
+        // eve_pose_task->setGoalOrientation(AngleAxisd(M_PI / 6, Vector3d::UnitX()).toRotationMatrix() * ee_ori);
+        eve_gripper_task->setGoalPosition(Vector2d(0.02, -0.02));
+
+
+        // update task model
+        walle_N_prec.setIdentity();
+        walle_pose_task->updateTaskModel(walle_N_prec);
+        walle_gripper_task->updateTaskModel(walle_pose_task->getTaskAndPreviousNullspace());
+        walle_joint_task->updateTaskModel(walle_gripper_task->getTaskAndPreviousNullspace());
+
+        eve_N_prec.setIdentity();
+        eve_pose_task->updateTaskModel(eve_N_prec);
+        eve_gripper_task->updateTaskModel(eve_pose_task->getTaskAndPreviousNullspace());
+        eve_joint_task->updateTaskModel(eve_gripper_task->getTaskAndPreviousNullspace());
+
+        // compute torques
+        walle_command_torques = walle_pose_task->computeTorques() + walle_gripper_task->computeTorques() + walle_joint_task->computeTorques();
+        eve_command_torques = eve_pose_task->computeTorques() + eve_gripper_task->computeTorques() + eve_joint_task->computeTorques();
+
 
         // send to redis
         redis_client.sendAllFromGroup();
@@ -182,8 +252,8 @@ int main(int argc, char** argv) {
         file.close();
     }
 
-    walle_control_torques.setZero();
-    eve_control_torques.setZero();
+    walle_command_torques.setZero();
+    eve_command_torques.setZero();
     gravity_comp_enabled = true;
     redis_client.sendAllFromGroup();
 
