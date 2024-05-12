@@ -120,6 +120,8 @@ int main(int argc, char** argv) {
     ofstream file;
     file.open("../../homework/laundre/data_files/logger.txt");
 
+    VectorXd q_d = VectorXd::Zero(dof);
+
     while (runloop) {
         // wait for next scheduled loop
         timer.waitForNextLoop();
@@ -156,8 +158,10 @@ int main(int argc, char** argv) {
         double kp = 10.0;      // chose your p gain
         double kv = 5.0;      // chose your d gain
         double kvj = 2.0;
+        double kpj = 5.0;
 
         Vector3d xd = box_pose(seq(0,2), 3);
+        xd += Vector3d(0,0,-0.05);
 
         Vector3d eve_x = eve->position(link_name, pos_in_link)+eve_origin;
         Vector3d eve_v = eve_Jv*eve_dq;
@@ -165,10 +169,10 @@ int main(int argc, char** argv) {
         Vector3d walle_v = walle_Jv*walle_dq;
 
         Vector3d eve_F = eve->taskInertiaMatrix(eve_Jv)*(-1*kp*(eve_x-xd)-kv*eve_v);
-        eve_control_torques = eve_Jv.transpose()*eve_F+eve->jointGravityVector()-eve->nullspaceMatrix(eve_Jv).transpose()*eve->M()*(kvj*eve_dq);
+        eve_control_torques = eve_Jv.transpose()*eve_F+eve->jointGravityVector()-eve->nullspaceMatrix(eve_Jv).transpose()*eve->M()*(kvj*eve_dq+kpj*(eve_q - q_d));
 
         Vector3d walle_F = walle->taskInertiaMatrix(walle_Jv)*(-1*kp*(walle_x-xd)-kv*walle_v);
-        walle_control_torques = walle_Jv.transpose()*walle_F+walle->jointGravityVector()-walle->nullspaceMatrix(walle_Jv).transpose()*walle->M()*(kvj*walle_dq);
+        walle_control_torques = walle_Jv.transpose()*walle_F+walle->jointGravityVector()-walle->nullspaceMatrix(walle_Jv).transpose()*walle->M()*(kvj*walle_dq+kpj*(walle_q - q_d));
 
         // send to redis
         redis_client.sendAllFromGroup();
