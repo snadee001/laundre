@@ -176,19 +176,26 @@ int main(int argc, char** argv) {
 
         // update goals
         Vector3d x_desired = box_pose(seq(0,2), 3);
-        x_desired += Vector3d(0,0,-0.05);
-        Vector3d box_spacing = Vector3d(0.0, 0.1, 0.0);
+        x_desired += Vector3d(0, 0, 0.05);
+        Vector3d box_spacing = Vector3d(0.0, 0.05, 0.0);
 
         Vector3d walle_x_desired = x_desired - walle_origin - box_spacing;
         Vector3d eve_x_desired = x_desired - eve_origin + box_spacing;
 
+        Matrix3d walle_R_desired;
+        walle_R_desired << 0.5*sqrt(2.0), 0.5*sqrt(2.0), 0.0, 0.0, 0.0, 1.0, 0.5*sqrt(2.0), -0.5*sqrt(2.0), 0.0;
+
+        Matrix3d eve_R_desired;
+        eve_R_desired << -0.5*sqrt(2.0), -0.5*sqrt(2.0), 0.0, 0.0, 0.0, -1.0, 0.5*sqrt(2.0), -0.5*sqrt(2.0), 0.0;
+
         walle_pose_task->setGoalPosition(walle_x_desired);
-        // walle_pose_task->setGoalOrientation(AngleAxisd(M_PI / 6, Vector3d::UnitX()).toRotationMatrix() * ee_ori);
+        walle_pose_task->setGoalOrientation(walle_R_desired);
         walle_gripper_task->setGoalPosition(Vector2d(0.02, -0.02));
 
         eve_pose_task->setGoalPosition(eve_x_desired);
-        // eve_pose_task->setGoalOrientation(AngleAxisd(M_PI / 6, Vector3d::UnitX()).toRotationMatrix() * ee_ori);
+        eve_pose_task->setGoalOrientation(eve_R_desired);
         eve_gripper_task->setGoalPosition(Vector2d(0.02, -0.02));
+
 
 
         // update task model
