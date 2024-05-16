@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
 
     // arm task (joints 0-6)
     const string control_link = "link7";
-	const Vector3d control_point = Vector3d(0, 0, 0.07);
+	const Vector3d control_point = Vector3d(0, 0, 0.20);
 	Affine3d compliant_frame = Affine3d::Identity();
 	compliant_frame.translation() = control_point;
 
@@ -176,7 +176,7 @@ int main(int argc, char** argv) {
 
         // update goals
         Vector3d x_desired = box_pose(seq(0,2), 3);
-        x_desired += Vector3d(0, 0, 0.05);
+        x_desired += Vector3d(0.0, 0.0, 0.0);
         Vector3d box_spacing = Vector3d(0.0, 0.05, 0.0);
 
         Vector3d walle_x_desired = x_desired - walle_origin - box_spacing;
@@ -190,11 +190,11 @@ int main(int argc, char** argv) {
 
         walle_pose_task->setGoalPosition(walle_x_desired);
         walle_pose_task->setGoalOrientation(walle_R_desired);
-        walle_gripper_task->setGoalPosition(Vector2d(0.02, -0.02));
+        walle_gripper_task->setGoalPosition(Vector2d(0.07, -0.07));
 
         eve_pose_task->setGoalPosition(eve_x_desired);
         eve_pose_task->setGoalOrientation(eve_R_desired);
-        eve_gripper_task->setGoalPosition(Vector2d(0.02, -0.02));
+        eve_gripper_task->setGoalPosition(Vector2d(0.07, -0.07));
 
 
 
