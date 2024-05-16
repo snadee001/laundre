@@ -14,7 +14,7 @@ and is used to define the prefix of the redis keys used by the interface -->
 		<speedupFactor>1.0</speedupFactor>
 		<enableJointLimits>false</enableJointLimits>
 		<enableGravityCompensation>true</enableGravityCompensation>
-		<coeffFriction>0.5</coeffFriction>
+		<coeffFriction>2.0</coeffFriction>
 		<collisionRestitution>0.0</collisionRestitution>
 	</simParameters>
 

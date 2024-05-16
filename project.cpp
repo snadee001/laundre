@@ -224,17 +224,17 @@ int main(int argc, char** argv) {
 
             walle_R_desired << 0.5*sqrt(2.0), 0.5*sqrt(2.0), 0.0, 0.0, 0.0, 1.0, 0.5*sqrt(2.0), -0.5*sqrt(2.0), 0.0;
             eve_R_desired << -0.5*sqrt(2.0), -0.5*sqrt(2.0), 0.0, 0.0, 0.0, -1.0, 0.5*sqrt(2.0), -0.5*sqrt(2.0), 0.0;
-            gripper_desired = Vector2d(0.05, -0.05);
+            gripper_desired = Vector2d(0.04, -0.04);
 
             if ((walle_x_desired - walle_ee_pos).norm() < 0.01 && (eve_x_desired - eve_ee_pos).norm() < 0.01 && walle->dq().tail(2).norm() < 0.01 && eve->dq().tail(2).norm() < 0.01) {
                 state = RAISE;
 
                 // raise it up by 2
-                walle_x_desired += Vector3d(0.0, 0.0, 0.02);
-                eve_x_desired += Vector3d(0.0, 0.0, 0.02);
+                walle_x_desired += Vector3d(0.0, 0.0, 0.8);
+                eve_x_desired += Vector3d(0.0, 0.0, 0.8);
             }
         } else if (state == RAISE) {
-            gripper_desired = Vector2d(0.05, -0.05);
+            gripper_desired = Vector2d(0.04, -0.04);
 
             // if ((walle_x_desired - walle_ee_pos).norm() < 0.01 && (eve_x_desired - eve_ee_pos).norm() < 0.01) {
             //     state = MOVE;
