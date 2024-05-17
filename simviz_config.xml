@@ -35,4 +35,11 @@ and is used to define the prefix of the redis keys used by the interface -->
 		<filterCutoff>5.0</filterCutoff>
 	</forceSensor> -->
 
+	<environment>
+        <model name="custom_box">
+            <origin xyz="0.3 0.0 0.4" rpy="0 0 0" />
+            <model dir="${CS225A_URDF_FOLDER}/custom_box" path="custom_box.urdf" name="custom_box" />
+        </model>
+    </environment>
+
 </simvizConfiguration>

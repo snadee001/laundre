@@ -53,6 +53,9 @@ int main(int argc, char** argv) {
     auto walle = std::make_shared<Sai2Model::Sai2Model>(robot_file);
     auto eve = std::make_shared<Sai2Model::Sai2Model>(robot_file);
 
+    std::string custom_box_file = "${CS225A_URDF_FOLDER}/custom_box/custom_box.urdf";
+    auto custom_box = std::make_shared<Sai2Model::Sai2Model>(custom_box_file);
+
     Vector3d eve_origin = Vector3d(0, 0.3, 0);
     Vector3d walle_origin = Vector3d(0, -0.3, 0);
 
@@ -64,6 +67,9 @@ int main(int argc, char** argv) {
     VectorXd eve_command_torques = VectorXd::Zero(dof);
     MatrixXd eve_N_prec = MatrixXd::Identity(dof, dof);
 
+    int custom_box_dof = custom_box->dof();
+    VectorXd custom_box_command_torques = VectorXd::Zero(custom_box_dof);
+    MatrixXd custom_box_N_prec = MatrixXd::Identity(custom_box_dof, custom_box_dof);
 
     // arm task (joints 0-6)
     const string control_link = "link7";
@@ -118,6 +124,11 @@ int main(int argc, char** argv) {
     auto eve_joint_task = std::make_shared<Sai2Primitives::JointTask>(eve);
     eve_joint_task->setGains(kp_j, kv_j, 0);
     eve_joint_task->setGoalPosition(q_desired);
+
+    auto custom_box_joint_task = std::make_shared<Sai2Primitives::JointTask>(custom_box);
+    custom_box_joint_task->setGains(kp_j, kv_j, 0);
+    VectorXd custom_box_q_desired = VectorXd::Zero(custom_box_dof);
+    custom_box_joint_task->setGoalPosition(custom_box_q_desired);
 
     // flag for enabling gravity compensation
     bool gravity_comp_enabled = true;
