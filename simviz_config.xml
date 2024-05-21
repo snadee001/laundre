@@ -35,6 +35,20 @@ and is used to define the prefix of the redis keys used by the interface -->
 		<filterCutoff>5.0</filterCutoff>
 	</forceSensor> -->
 
+	<forceSensor>
+		<robotName>WALLE</robotName>
+		<linkName>link7</linkName>
+		<origin xyz="0 0 0" rpy="0 0 0" />
+		<filterCutoff>5.0</filterCutoff>
+	</forceSensor>
+
+	<forceSensor>
+		<robotName>EVE</robotName>
+		<linkName>link7</linkName>
+		<origin xyz="0 0 0" rpy="0 0 0" />
+		<filterCutoff>5.0</filterCutoff>
+	</forceSensor>
+
 	<environment>
         <model name="custom_box">
             <origin xyz="0.3 0.0 0.4" rpy="0 0 0" />
