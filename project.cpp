@@ -239,9 +239,14 @@ int main(int argc, char** argv) {
         Matrix3d walle_R_desired;
         Matrix3d eve_R_desired;
 
+        Matrix3d rotation_matrix;
+        rotation_matrix << 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 0.0;
+
 
         walle_R_desired << 0.5*sqrt(2.0), 0.5*sqrt(2.0), 0.0, 0.0, 0.0, 1.0, 0.5*sqrt(2.0), -0.5*sqrt(2.0), 0.0;
+        walle_R_desired = walle_R_desired*rotation_matrix;
         eve_R_desired << -0.5*sqrt(2.0), -0.5*sqrt(2.0), 0.0, 0.0, 0.0, -1.0, 0.5*sqrt(2.0), -0.5*sqrt(2.0), 0.0;
+        eve_R_desired = eve_R_desired*rotation_matrix;
 
         Vector3d walle_x_desired = walle_ee_pos;
         Vector3d eve_x_desired = eve_ee_pos;
@@ -249,7 +254,7 @@ int main(int argc, char** argv) {
         Vector2d gripper_desired;
 
         if (state == LEFT_REACH) {
-            Vector3d x_desired = custom_box->positionInWorld("flap_left");
+            Vector3d x_desired = custom_box->positionInWorld("flap_left")+Vector3d(0, -0.35, 0.1);
             std::tie(walle_x_desired, eve_x_desired) = move(x_desired);
             gripper_desired = grasp(false);
         }
