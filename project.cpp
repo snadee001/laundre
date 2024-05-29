@@ -69,6 +69,7 @@ std::tuple<Vector2d, Matrix3d> grasp(bool is_grasp, Matrix3d ori) {
 int main(int argc, char** argv) {
 
     int state = LEFT_REACH;
+    bool start = true;
 
     Sai2Model::URDF_FOLDERS["CS225A_URDF_FOLDER"] = string(CS225A_URDF_FOLDER);
 
@@ -101,7 +102,7 @@ int main(int argc, char** argv) {
 
     // arm task (joints 0-6)
     const string control_link = "link7";
-	const Vector3d control_point = Vector3d(0, 0, 0.20);
+	const Vector3d control_point = Vector3d(0, 0, 0.0);
 	Affine3d compliant_frame = Affine3d::Identity();
 	compliant_frame.translation() = control_point;
 
@@ -209,9 +210,6 @@ int main(int argc, char** argv) {
     ofstream file;
     file.open("../../homework/laundre/data_files/logger.txt");\
 
-    bool midpoint_reached = false;
-    bool fold_setup = false;
-
     //Variables for folding task
     const double control_cycle {0.001};
     Vector3d offset;
@@ -240,8 +238,8 @@ int main(int argc, char** argv) {
         eve_ee_pos = eve->position(control_link, control_point);
         eve_ee_ori = eve->rotation(control_link);
 
-        Matrix3d walle_R_desired = walle_ee_ori;
-        Matrix3d eve_R_desired = eve_ee_ori;
+        Matrix3d walle_R_desired;
+        Matrix3d eve_R_desired;
 
         /*
         Matrix3d rotation_matrix;
@@ -261,83 +259,121 @@ int main(int argc, char** argv) {
         Matrix3d ee_ori_world;
         Matrix3d box_ori = Matrix3d::Zero();
 
-        if (state == LEFT_REACH) {
-            Vector3d x_desired = custom_box->positionInWorld("flap_left")+Vector3d(0, -0.35, 0.1);
-            std::tie(walle_x_desired, eve_x_desired) = move(x_desired, Vector3d(0.05, 0, 0));
-            std::tie(gripper_desired, ee_ori_world) = grasp(false, box_ori);
-        }
-        else if (state == LEFT_GRASP) {
-            box_ori = custom_box->rotationInWorld("flap_left");
-            std::tie(gripper_desired, ee_ori_world) = grasp(true, box_ori);
-        
-            walle_R_desired = walle->rotation("link0")*ee_ori_world;
-            eve_R_desired = eve->rotation("link0")*ee_ori_world;
-        }
-        else if (state == LEFT_RAISE) {
-            walle_x_desired += Vector3d(0, 0, 0.05);
-            eve_x_desired += Vector3d(0, 0, 0.05);
-            box_ori = custom_box->rotationInWorld("flap_left");
-            std::tie(gripper_desired, ee_ori_world) = grasp(true, box_ori);
-        
-            walle_R_desired = walle->rotation("link0")*ee_ori_world;
-            eve_R_desired = eve->rotation("link0")*ee_ori_world;
-        }
-        else if (state == LEFT_TOCENTER) {
-            Vector3d x_desired = custom_box->positionInWorld("box_base")+Vector3d(0, 0, 0.1);
-            std::tie(walle_x_desired, eve_x_desired) = move(x_desired, Vector3d(0.05, 0, 0));
-            box_ori = custom_box->rotationInWorld("flap_left");
-            std::tie(gripper_desired, ee_ori_world) = grasp(true, box_ori);
-        
-            walle_R_desired = walle->rotation("link0")*ee_ori_world;
-            eve_R_desired = eve->rotation("link0")*ee_ori_world;
-        }
-        else if (state == RIGHT_REACH) {
-            Vector3d x_desired = custom_box->positionInWorld("flap_left");
-            std::tie(walle_x_desired, eve_x_desired) = move(x_desired, Vector3d(-0.05, 0, 0));
-            std::tie(gripper_desired, ee_ori_world) = grasp(false, box_ori);
-        }
-        else if (state == RIGHT_GRASP) {
-            box_ori = custom_box->rotationInWorld("flap_left");
-            std::tie(gripper_desired, ee_ori_world) = grasp(true, box_ori);
-        
-            walle_R_desired = walle->rotation("link0")*ee_ori_world;
-            eve_R_desired = eve->rotation("link0")*ee_ori_world;
-        }
-        else if (state == RIGHT_RAISE) {
-            walle_x_desired += Vector3d(0, 0, 0.05);
-            eve_x_desired += Vector3d(0, 0, 0.05);
-            box_ori = custom_box->rotationInWorld("flap_left");
-            std::tie(gripper_desired, ee_ori_world) = grasp(true, box_ori);
-            
-            walle_R_desired = walle->rotation("link0")*ee_ori_world;
-            eve_R_desired = eve->rotation("link0")*ee_ori_world;
-        }
-        else if (state == RIGHT_TOCENTER) {
-            Vector3d x_desired = custom_box->positionInWorld("box_base")+Vector3d(0, 0, 0.1);
-            std::tie(walle_x_desired, eve_x_desired) = move(x_desired, Vector3d(-0.05, 0, 0));
-            box_ori = custom_box->rotationInWorld("flap_left");
-            std::tie(gripper_desired, ee_ori_world) = grasp(true, box_ori);
-        
-            walle_R_desired = walle->rotation("link0")*ee_ori_world;
-            eve_R_desired = eve->rotation("link0")*ee_ori_world;
-        }
-        else
-            std::tie(gripper_desired, ee_ori_world) = grasp(false, box_ori);
+        if (start) {
+            if (state == LEFT_REACH) {
+                Vector3d x_desired = custom_box->positionInWorld("flap_left")+Vector3d(0.1, -0.1, 0.05);
+                std::tie(walle_x_desired, eve_x_desired) = move(x_desired, Vector3d(0.15, 0, 0));
+                std::tie(gripper_desired, ee_ori_world) = grasp(false, box_ori);
+            }
+            else if (state == LEFT_GRASP) {
+                Vector3d x_desired = custom_box->positionInWorld("flap_left")+Vector3d(0.1, -0.2, 0.05);
+                std::tie(walle_x_desired, eve_x_desired) = move(x_desired, Vector3d(0.15, 0, 0));
 
-        if ((walle_x_desired - walle_ee_pos).norm() < 0.01 && (eve_x_desired - eve_ee_pos).norm() < 0.01 
-        && (walle_R_desired - walle_ee_ori).norm() < 0.01 && (eve_R_desired - eve_ee_ori).norm() < 0.01
-        && (walle_q.tail(2) - gripper_desired).norm() < 0.01 && (eve_q.tail(2) - gripper_desired).norm() < 0.01) {
+                box_ori = custom_box->rotationInWorld("flap_left");
+                std::tie(gripper_desired, ee_ori_world) = grasp(true, box_ori);
+            
+                walle_R_desired = walle->rotation("link0")*ee_ori_world;
+                eve_R_desired = eve->rotation("link0")*ee_ori_world;
+            }
+            else if (state == LEFT_RAISE) {
+                Vector3d x_desired = custom_box->positionInWorld("box_base")+Vector3d(0, -0.1, 0.2);
+                std::tie(walle_x_desired, eve_x_desired) = move(x_desired, Vector3d(0.15, 0, 0));
+
+                Matrix3d rotation_matrix;
+                rotation_matrix << 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, -1.0, 0.0;
+
+                box_ori = rotation_matrix*custom_box->rotationInWorld("flap_left");
+                std::tie(gripper_desired, ee_ori_world) = grasp(true, box_ori);
+            
+                walle_R_desired = walle->rotation("link0")*ee_ori_world;
+                eve_R_desired = eve->rotation("link0")*ee_ori_world;
+            }
+            else if (state == LEFT_TOCENTER) {
+                Vector3d x_desired = custom_box->positionInWorld("box_base")+Vector3d(0, 0, 0.1);
+                std::tie(walle_x_desired, eve_x_desired) = move(x_desired, Vector3d(0.05, 0, 0));
+
+                Matrix3d rotation_matrix;
+                rotation_matrix << 1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0;
+
+                box_ori = rotation_matrix*custom_box->rotationInWorld("flap_left");
+                std::tie(gripper_desired, ee_ori_world) = grasp(true, box_ori);
+            
+                walle_R_desired = walle->rotation("link0")*ee_ori_world;
+                eve_R_desired = eve->rotation("link0")*ee_ori_world;
+            }
+            else if (state == RIGHT_REACH) {
+                Vector3d x_desired = custom_box->positionInWorld("flap_right")+Vector3d(0.1, 0.1, 0.05);
+                std::tie(walle_x_desired, eve_x_desired) = move(x_desired, Vector3d(0.15, 0, 0));
+                std::tie(gripper_desired, ee_ori_world) = grasp(false, box_ori);
+            }
+            else if (state == RIGHT_GRASP) {
+                Vector3d x_desired = custom_box->positionInWorld("flap_right")+Vector3d(0.1, 0.2, 0.05);
+                std::tie(walle_x_desired, eve_x_desired) = move(x_desired, Vector3d(0.15, 0, 0));
+
+                Matrix3d rotation_matrix;
+                rotation_matrix << 1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0;
+
+                box_ori = rotation_matrix*custom_box->rotationInWorld("flap_right");
+                std::tie(gripper_desired, ee_ori_world) = grasp(true, box_ori);
+            
+                walle_R_desired = walle->rotation("link0")*ee_ori_world;
+                eve_R_desired = eve->rotation("link0")*ee_ori_world;
+            }
+            else if (state == RIGHT_RAISE) {
+                Vector3d x_desired = custom_box->positionInWorld("box_base")+Vector3d(0, 0.1, 0.2);
+                std::tie(walle_x_desired, eve_x_desired) = move(x_desired, Vector3d(0.15, 0, 0));
+
+                Matrix3d rotation_matrix;
+                Matrix3d rotation_matrix2;
+                rotation_matrix << 1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0;
+                rotation_matrix2 << 1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0;
+
+                box_ori = rotation_matrix2*rotation_matrix*custom_box->rotationInWorld("flap_right");
+                std::tie(gripper_desired, ee_ori_world) = grasp(true, box_ori);
+            
+                walle_R_desired = walle->rotation("link0")*ee_ori_world;
+                eve_R_desired = eve->rotation("link0")*ee_ori_world;
+            }
+            else if (state == LEFT_TOCENTER) {
+                Vector3d x_desired = custom_box->positionInWorld("box_base")+Vector3d(0, 0, 0.1);
+                std::tie(walle_x_desired, eve_x_desired) = move(x_desired, Vector3d(0.05, 0, 0));
+                
+                Matrix3d rotation_matrix;
+                Matrix3d rotation_matrix2;
+                rotation_matrix << 1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0;
+                rotation_matrix << 1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0;
+
+                box_ori = rotation_matrix2*rotation_matrix*custom_box->rotationInWorld("flap_right");
+                std::tie(gripper_desired, ee_ori_world) = grasp(true, box_ori);
+            
+                walle_R_desired = walle->rotation("link0")*ee_ori_world;
+                eve_R_desired = eve->rotation("link0")*ee_ori_world;
+            }
+            else
+                std::tie(gripper_desired, ee_ori_world) = grasp(false, box_ori);
+
+            walle_pose_task->setGoalPosition(walle_x_desired);
+            walle_gripper_task->setGoalPosition(gripper_desired);
+
+            eve_pose_task->setGoalPosition(eve_x_desired);
+            eve_gripper_task->setGoalPosition(gripper_desired);
+
+            if (state != LEFT_REACH && state != RIGHT_REACH) {
+                walle_pose_task->setGoalOrientation(walle_R_desired);
+                eve_pose_task->setGoalOrientation(eve_R_desired);
+            }
+
+            start = false;
+            cout << "Started state " << state << "\n";
+        }
+        else if (walle_pose_task->goalPositionReached(0.01) && eve_pose_task->goalPositionReached(0.01) 
+        && walle_pose_task->goalOrientationReached(0.01) && eve_pose_task->goalOrientationReached(0.01)
+        && walle_gripper_task->goalPositionReached() && eve_gripper_task->goalPositionReached() 
+        && state <= RIGHT_TOCENTER) {
             cout << "Moving on to next state! Yay!" << "\n";
             state += 1;
+            start = true;
         }
-
-        walle_pose_task->setGoalPosition(walle_x_desired);
-        walle_pose_task->setGoalOrientation(walle_R_desired);
-        walle_gripper_task->setGoalPosition(gripper_desired);
-
-        eve_pose_task->setGoalPosition(eve_x_desired);
-        eve_pose_task->setGoalOrientation(eve_R_desired);
-        eve_gripper_task->setGoalPosition(gripper_desired);
 
         // update task model
         walle_N_prec.setIdentity();
