@@ -7,11 +7,6 @@
 		<model dir="${CS225A_URDF_FOLDER}/panda" path="panda_arm_hand.urdf" name="panda" />
 	</robot>
 
-	<robot name="EVE">
-		<origin xyz="0 0.30 0" rpy="0 0 0" />
-		<model dir="${CS225A_URDF_FOLDER}/panda" path="panda_arm_hand.urdf" name="panda" />
-	</robot>
-
 	<static_object name="Floor">
 		<origin xyz="0.0 0.0 -0.05" rpy="0 0 0" />
 		<visual>
