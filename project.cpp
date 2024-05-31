@@ -35,7 +35,7 @@ enum Action {
     REACH,
     SLIP,
     FLIP
-}
+};
 
 // for handling ctrl+c and interruptions properly
 #include <signal.h>
@@ -163,43 +163,43 @@ int main(int argc, char** argv) {
         walle_ee_ori = walle->rotation(control_link);
 
         Matrix3d walle_R_desired = walle_ee_ori;
-        Matrix3d 
 
         Vector3d walle_x_desired = walle_ee_pos;
 
         Matrix3d ee_ori_world;
         Matrix3d box_ori = Matrix3d::Zero();
+        Vector3d x_cur, x_target;
 
         if (start) {
             //x_cur and x_target should be hooked up to CV pipeline & determined
             if (part == LEFT_SLEEVE) {
-                Vector3d x_cur = Vector3d(0.3,-0.2, 0.0);
-                Vector3d x_target = Vector3d(0.3, -0.1, 0.0);
+                x_cur = Vector3d(0.3,-0.2, 0.0);
+                x_target = Vector3d(0.3, -0.1, 0.0);
             } else if (part == RIGHT_SLEEVE) {
-                Vector3d x_cur = Vector3d(0.3,0.2, 0.0);
-                Vector3d x_target = Vector3d(0.3, 0.1, 0.0);
+                x_cur = Vector3d(0.3,0.2, 0.0);
+                x_target = Vector3d(0.3, 0.1, 0.0);
             } else if (part == BOTTOM_LEFT) {
-                Vector3d x_cur = Vector3d(0.3,0.2, 0.0);
-                Vector3d x_target = Vector3d(0.3, 0.1, 0.0);
+                x_cur = Vector3d(0.3,0.2, 0.0);
+                x_target = Vector3d(0.3, 0.1, 0.0);
             } else if (part == BOTTOM_RIGHT) {
-                Vector3d x_cur = Vector3d(0.3,0.2, 0.0);
-                Vector3d x_target = Vector3d(0.3, 0.1, 0.0);
+                x_cur = Vector3d(0.3,0.2, 0.0);
+                x_target = Vector3d(0.3, 0.1, 0.0);
             } else if (part == BOTTOM) {
-                Vector3d x_cur = Vector3d(0.3,0.2, 0.0);
-                Vector3d x_target = Vector3d(0.3, 0.1, 0.0);
+                x_cur = Vector3d(0.3,0.2, 0.0);
+                x_target = Vector3d(0.3, 0.1, 0.0);
             } else if (part == BOTTOM2) {
-                Vector3d x_cur = Vector3d(0.3,0.2, 0.0);
-                Vector3d x_target = Vector3d(0.3, 0.1, 0.0);
+                x_cur = Vector3d(0.3,0.2, 0.0);
+                x_target = Vector3d(0.3, 0.1, 0.0);
             } else if (part == THIRD) {
-                Vector3d x_cur = Vector3d(0.3,0.2, 0.0);
-                Vector3d x_target = Vector3d(0.3, 0.1, 0.0);
+                x_cur = Vector3d(0.3,0.2, 0.0);
+                x_target = Vector3d(0.3, 0.1, 0.0);
             }else if (part == THIRD2) {
-                Vector3d x_cur = Vector3d(0.3,0.2, 0.0);
-                Vector3d x_target = Vector3d(0.3, 0.1, 0.0);
+                x_cur = Vector3d(0.3,0.2, 0.0);
+                x_target = Vector3d(0.3, 0.1, 0.0);
             }
             else //Done
-                Vector x_cur = Vector3d (0.0, 0.0, 0.5); //move above workspace when done
-W
+                x_cur = Vector3d (0.0, 0.0, 0.5); //move above workspace when done
+
             if (action == REACH) {
                 walle_x_desired = x_cur;
                 walle_pose_task->setGoalPosition(walle_x_desired);
@@ -242,10 +242,6 @@ W
 
         // send to redis
         redis_client.sendAllFromGroup();
-    }
-
-    if (file.is_open()) {
-        file.close();
     }
 
     walle_command_torques.setZero();
