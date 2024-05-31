@@ -34,7 +34,8 @@ enum Part {
 enum Action {
     REACH,
     SLIP,
-    FLIP
+    FLIP,
+    RISE
 };
 
 // for handling ctrl+c and interruptions properly
@@ -51,9 +52,16 @@ using namespace ruckig;
 // config file names and object names
 const string robot_file = "${HW_FOLDER}/laundre/panda/panda_arm_spatula.urdf";
 
-Vector2d grasp(bool is_grasp) {
-    if (is_grasp) return Vector2d(0.05, -0.05);
-    else return Vector2d(0.1, -0.1);
+Matrix3d ori(Vector3d cur, Vector3d target) {
+    Matrix3d result = Matrix3d::Zero();
+    result(2, 2) = -1.0;
+    Vector2d vec = (target-cur).normalized().head(2);
+    result(0,0) = vec(0);
+    result(1,0) = vec(1);
+    result(0,1) = vec(1);
+    result(1,1) = -1*vec(0);
+
+    return result;
 }
 
 
@@ -80,8 +88,8 @@ int main(int argc, char** argv) {
 	MatrixXd walle_N_prec = MatrixXd::Identity(dof, dof);
 
     // arm task (joints 0-6)
-    const string control_link = "link7";
-	const Vector3d control_point = Vector3d(0, 0, 0.0);
+    const string control_link = "end-effector";
+	const Vector3d control_point = Vector3d(0.2286, 0.0, 0.01);
 	Affine3d compliant_frame = Affine3d::Identity();
 	compliant_frame.translation() = control_point;
 
@@ -164,6 +172,11 @@ int main(int argc, char** argv) {
         walle_ee_ori = walle->rotation(control_link);
 
         Matrix3d walle_R_desired = walle_ee_ori;
+        Matrix3d rotation135;
+        rotation135 <<
+        sqrt(2.0)/-2.0, 0.0, sqrt(2.0)/-2.0,
+        0.0, 1.0, 0.0,
+        sqrt(2.0)/2.0, 0, sqrt(2.0)/-2.0;
 
         Vector3d walle_x_desired = walle_ee_pos;
 
@@ -174,53 +187,53 @@ int main(int argc, char** argv) {
         if (start) {
             //x_cur and x_target should be hooked up to CV pipeline & determined
             if (part == LEFT_SLEEVE) {
-                x_cur = Vector3d(0.3,-0.2, 0.0);
-                x_target = Vector3d(0.3, -0.1, 0.0);
+                x_cur = Vector3d(0.5,-0.2, 0.0);
+                x_target = Vector3d(0.5, -0.1, 0.0);
             } else if (part == RIGHT_SLEEVE) {
-                x_cur = Vector3d(0.3,0.2, 0.0);
-                x_target = Vector3d(0.3, 0.1, 0.0);
+                x_cur = Vector3d(0.5,0.2, 0.0);
+                x_target = Vector3d(0.5, 0.1, 0.0);
             } else if (part == BOTTOM_LEFT) {
-                x_cur = Vector3d(0.3,0.2, 0.0);
-                x_target = Vector3d(0.3, 0.1, 0.0);
+                x_cur = Vector3d(0.5,0.2, 0.0);
+                x_target = Vector3d(0.5, 0.1, 0.0);
             } else if (part == BOTTOM_RIGHT) {
-                x_cur = Vector3d(0.3,0.2, 0.0);
-                x_target = Vector3d(0.3, 0.1, 0.0);
+                x_cur = Vector3d(0.5,0.2, 0.0);
+                x_target = Vector3d(0.5, 0.1, 0.0);
             } else if (part == BOTTOM) {
-                x_cur = Vector3d(0.3,0.2, 0.0);
-                x_target = Vector3d(0.3, 0.1, 0.0);
+                x_cur = Vector3d(0.5,0.2, 0.0);
+                x_target = Vector3d(0.5, 0.1, 0.0);
             } else if (part == BOTTOM2) {
-                x_cur = Vector3d(0.3,0.2, 0.0);
-                x_target = Vector3d(0.3, 0.1, 0.0);
+                x_cur = Vector3d(0.5,0.2, 0.0);
+                x_target = Vector3d(0.5, 0.1, 0.0);
             } else if (part == THIRD) {
-                x_cur = Vector3d(0.3,0.2, 0.0);
-                x_target = Vector3d(0.3, 0.1, 0.0);
+                x_cur = Vector3d(0.5,0.2, 0.0);
+                x_target = Vector3d(0.5, 0.1, 0.0);
             }else if (part == THIRD2) {
-                x_cur = Vector3d(0.3,0.2, 0.0);
-                x_target = Vector3d(0.3, 0.1, 0.0);
+                x_cur = Vector3d(0.5,0.2, 0.0);
+                x_target = Vector3d(0.5, 0.1, 0.0);
             }
-            else //Done
-                x_cur = Vector3d (0.0, 0.0, 0.5); //move above workspace when done
+            else {
+                x_cur = Vector3d(0.0, 0.0, 0.2); //move above workspace when done
+                x_target = Vector3d(0.1, 0.0, 0.2);
+            }
 
             if (action == REACH) {
-                walle_x_desired = x_cur;
-                walle_pose_task->setGoalPosition(walle_x_desired);
+                walle_pose_task->setGoalPosition(x_cur);
+                walle_pose_task->setGoalOrientation(ori(x_cur, x_target));
+
             } else if (action == SLIP) {
                 // Need force control for this one, need to keep end effector applying force to ground
-                walle_x_desired = x_target;
-                walle_pose_task->setGoalPosition(walle_x_desired);
-                //walle_R_desired = s.t. end effector is flat on the ground & perpendicular to the cur-target line
-                walle_pose_task->setGoalOrientation(walle_R_desired);
+                walle_pose_task->setGoalPosition(x_target);
+                walle_pose_task->setGoalOrientation(ori(x_cur, x_target));
             } else if (action == FLIP) {
                 //Keep end effector position fixed, only change orientation
-                walle_x_desired = x_target;
-                walle_pose_task->setGoalPosition(walle_x_desired);
-                //walle_R_desired = s.t. end effector turns 135 degrees while still being perpendicular to cur-target line
-                walle_pose_task->setGoalOrientation(walle_R_desired);
-            }
+                walle_pose_task->setGoalPosition(x_target);
+                walle_pose_task->setGoalOrientation(walle_ee_ori*rotation135*walle_ee_ori.inverse()*ori(x_cur, x_target));
+            } else if (action == RISE)
+                walle_pose_task->setGoalPosition(x_target+Vector3d(0,0,0.3));
 
             start = false;
             if (part <= THIRD2)
-                cout << "Working on " << action << "with " << part << "\n";
+                cout << "Working on action " << action << " with part " << part << "\n";
             else
                 cout << "Done!" << "\n";
         }
@@ -228,7 +241,7 @@ int main(int argc, char** argv) {
         && walle_pose_task->goalOrientationReached(0.01)
         && part <= THIRD2) {
             cout << "Moving on! Yay!" << "\n";
-            action = (action+1)%3;
+            action = (action+1)%4;
             if (action == 0) part += 1;
             start = true;
         }

@@ -18,12 +18,50 @@
 				<color rgba="0.0 0.1 0.5 1.0" />
 			</material>
 		</visual>
-		<collision>
+		<!--<collision>
 			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 			<geometry>
 				<box size="5.0 5.0 0.1" />
 			</geometry>
-		</collision>
+		</collision>-->
+	</static_object>
+
+	<static_object name="box1">
+		<origin xyz="0.5 0.2 0.01" rpy="0 0 0" />
+		<visual>
+			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+			<geometry>
+				<box size="0.02 0.02 0.02" />
+			</geometry>
+			<material name="material_green">
+				<color rgba="0.0 0.5 0.1 1.0" />
+			</material>
+		</visual>
+		<!--<collision>
+			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+			<geometry>
+				<box size="5.0 5.0 0.1" />
+			</geometry>
+		</collision>-->
+	</static_object>
+
+	<static_object name="box2">
+		<origin xyz="0.5 0.1 0.01" rpy="0 0 0" />
+		<visual>
+			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+			<geometry>
+				<box size="0.02 0.02 0.02" />
+			</geometry>
+			<material name="material_green">
+				<color rgba="0.0 0.5 0.1 1.0" />
+			</material>
+		</visual>
+		<!--<collision>
+			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+			<geometry>
+				<box size="5.0 5.0 0.1" />
+			</geometry>
+		</collision>-->
 	</static_object>
 
 	<light name="light1" type="directional">
