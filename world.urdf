@@ -56,7 +56,7 @@
 	</dynamic_object> -->
 
 	<robot name="custom_box">
-    	<origin xyz="0.3 0.0 0.05" rpy="0 0 0"/>
+    	<origin xyz="0.5 0.0 0.05" rpy="0 0 0"/>
     	<model dir="${CS225A_URDF_FOLDER}/custom_box" path="custom_box.urdf" name="custom_box"/>
   	</robot>
 
