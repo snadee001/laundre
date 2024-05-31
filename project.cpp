@@ -20,16 +20,22 @@
 #include "redis_keys.h"
 
 // States 
-enum State {
-    LEFT_REACH,
-    LEFT_GRASP,
-    LEFT_RAISE,
-    LEFT_TOCENTER,
-    RIGHT_REACH,
-    RIGHT_GRASP,
-    RIGHT_RAISE,
-    RIGHT_TOCENTER
+enum Part {
+    LEFT_SLEEVE,
+    RIGHT_SLEEVE,
+    BOTTOM_LEFT,
+    BOTTOM_RIGHT,
+    BOTTOM,
+    BOTTOM2,
+    THIRD,
+    THIRD2
 };
+
+enum Action {
+    REACH,
+    SLIP,
+    FLIP
+}
 
 // for handling ctrl+c and interruptions properly
 #include <signal.h>
@@ -45,21 +51,16 @@ using namespace ruckig;
 // config file names and object names
 const string robot_file = "${CS225A_URDF_FOLDER}/panda/panda_arm_hand.urdf";
 
-Vector3d move(Vector3d x_desired, Vector3d spacing) {
-    Vector3d walle_origin = Vector3d(0, -0.3, 0);
-
-    return x_desired - walle_origin - spacing;
-}
-
 Vector2d grasp(bool is_grasp) {
-    if (is_grasp) return Vector2d(0.02, -0.02);
-    else return Vector2d(0.05, -0.05);
+    if (is_grasp) return Vector2d(0.05, -0.05);
+    else return Vector2d(0.1, -0.1);
 }
 
 
 int main(int argc, char** argv) {
 
-    int state = LEFT_REACH;
+    int part = LEFT_SLEEVE;
+    int action = REACH;
     bool start = true;
 
     Sai2Model::URDF_FOLDERS["CS225A_URDF_FOLDER"] = string(CS225A_URDF_FOLDER);
@@ -71,22 +72,11 @@ int main(int argc, char** argv) {
 
     // load robots
     auto walle = std::make_shared<Sai2Model::Sai2Model>(robot_file);
-    auto eve = std::make_shared<Sai2Model::Sai2Model>(robot_file);
-
-    std::string custom_box_file = "${CS225A_URDF_FOLDER}/custom_box/custom_box.urdf";
-    auto custom_box = std::make_shared<Sai2Model::Sai2Model>(custom_box_file);
-
-    Vector3d eve_origin = Vector3d(0, 0.3, 0);
-    Vector3d walle_origin = Vector3d(0, -0.3, 0);
 
     // prepare controller
 	int dof = walle->dof(); // same as eve here
 	VectorXd walle_command_torques = VectorXd::Zero(dof);  // panda + gripper torques 
 	MatrixXd walle_N_prec = MatrixXd::Identity(dof, dof);
-
-    int custom_box_dof = custom_box->dof();
-    VectorXd custom_box_command_torques = VectorXd::Zero(custom_box_dof);
-    MatrixXd custom_box_N_prec = MatrixXd::Identity(custom_box_dof, custom_box_dof);
 
     // arm task (joints 0-6)
     const string control_link = "link7";
@@ -101,18 +91,6 @@ int main(int argc, char** argv) {
     Vector3d walle_ee_pos;
 	Matrix3d walle_ee_ori;
 
-    // gripper partial joint task (joints 7-8)
-    MatrixXd gripper_selection_matrix = MatrixXd::Zero(2, walle->dof());
-	gripper_selection_matrix(0, 7) = 1;
-	gripper_selection_matrix(1, 8) = 1;
-
-	double kp_gripper = 5e3;
-	double kv_gripper = 1e2;
-
-	auto walle_gripper_task = std::make_shared<Sai2Primitives::JointTask>(walle, gripper_selection_matrix);
-	walle_gripper_task->setDynamicDecouplingType(Sai2Primitives::DynamicDecouplingType::IMPEDANCE);
-	walle_gripper_task->setGains(kp_gripper, kv_gripper, 0);
-
     // joint task for posture control
     auto walle_joint_task = std::make_shared<Sai2Primitives::JointTask>(walle);
 
@@ -125,11 +103,6 @@ int main(int argc, char** argv) {
 	q_desired.head(7) *= M_PI / 180.0;
 	q_desired.tail(2) << 0.04, -0.04;
 	walle_joint_task->setGoalPosition(q_desired);
-
-    auto custom_box_joint_task = std::make_shared<Sai2Primitives::JointTask>(custom_box);
-    custom_box_joint_task->setGains(kp_j, kv_j, 0);
-    VectorXd custom_box_q_desired = VectorXd::Zero(custom_box_dof);
-    custom_box_joint_task->setGoalPosition(custom_box_q_desired);
 
     // flag for enabling gravity compensation
     bool gravity_comp_enabled = true;
@@ -144,8 +117,8 @@ int main(int argc, char** argv) {
     redis_client.addToReceiveGroup(JOINT_ANGLES_WALLE_KEY, walle_q);
     redis_client.addToReceiveGroup(JOINT_VELOCITIES_WALLE_KEY, walle_dq);
 
-    VectorXd box_q = redis_client.getEigen(BOX_ANGLES_KEY);
-    redis_client.addToReceiveGroup(BOX_ANGLES_KEY, box_q);
+    //VectorXd box_q = redis_client.getEigen(BOX_ANGLES_KEY);
+    //redis_client.addToReceiveGroup(BOX_ANGLES_KEY, box_q);
 
     //MatrixXd box_pose = redis_client.getEigen(BOX_POSE_KEY);
     //redis_client.addToReceiveGroup(BOX_POSE_KEY, box_pose);
@@ -168,9 +141,6 @@ int main(int argc, char** argv) {
     const double control_freq = 1000;
     Sai2Common::LoopTimer timer(control_freq);
 
-    ofstream file;
-    file.open("../../homework/laundre/data_files/logger.txt");\
-
     //Variables for folding task
     const double control_cycle {0.001};
     Vector3d offset;
@@ -192,91 +162,83 @@ int main(int argc, char** argv) {
         walle_ee_pos = walle->position(control_link, control_point);
         walle_ee_ori = walle->rotation(control_link);
 
-        Matrix3d walle_R_desired;
-        walle_R_desired << 1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0;
+        Matrix3d walle_R_desired = walle_ee_ori;
+        Matrix3d 
 
         Vector3d walle_x_desired = walle_ee_pos;
 
-        Vector2d gripper_desired;
         Matrix3d ee_ori_world;
         Matrix3d box_ori = Matrix3d::Zero();
 
         if (start) {
-            if (state == LEFT_REACH) {
-                Vector3d x_desired = custom_box->positionInWorld("flap_left")+Vector3d(0.1, -0.1, 0.15);
-                walle_x_desired = move(x_desired, Vector3d(0.0, 0, 0));
-                gripper_desired = grasp(false);
+            //x_cur and x_target should be hooked up to CV pipeline & determined
+            if (part == LEFT_SLEEVE) {
+                Vector3d x_cur = Vector3d(0.3,-0.2, 0.0);
+                Vector3d x_target = Vector3d(0.3, -0.1, 0.0);
+            } else if (part == RIGHT_SLEEVE) {
+                Vector3d x_cur = Vector3d(0.3,0.2, 0.0);
+                Vector3d x_target = Vector3d(0.3, 0.1, 0.0);
+            } else if (part == BOTTOM_LEFT) {
+                Vector3d x_cur = Vector3d(0.3,0.2, 0.0);
+                Vector3d x_target = Vector3d(0.3, 0.1, 0.0);
+            } else if (part == BOTTOM_RIGHT) {
+                Vector3d x_cur = Vector3d(0.3,0.2, 0.0);
+                Vector3d x_target = Vector3d(0.3, 0.1, 0.0);
+            } else if (part == BOTTOM) {
+                Vector3d x_cur = Vector3d(0.3,0.2, 0.0);
+                Vector3d x_target = Vector3d(0.3, 0.1, 0.0);
+            } else if (part == BOTTOM2) {
+                Vector3d x_cur = Vector3d(0.3,0.2, 0.0);
+                Vector3d x_target = Vector3d(0.3, 0.1, 0.0);
+            } else if (part == THIRD) {
+                Vector3d x_cur = Vector3d(0.3,0.2, 0.0);
+                Vector3d x_target = Vector3d(0.3, 0.1, 0.0);
+            }else if (part == THIRD2) {
+                Vector3d x_cur = Vector3d(0.3,0.2, 0.0);
+                Vector3d x_target = Vector3d(0.3, 0.1, 0.0);
             }
-            else if (state == LEFT_GRASP) {
-                Vector3d x_desired = custom_box->positionInWorld("flap_left")+Vector3d(0.1, -0.2, 0.15);
-                walle_x_desired = move(x_desired, Vector3d(0.0, 0, 0));
-                gripper_desired = grasp(true);
-            }
-            else if (state == LEFT_RAISE) {
-                Vector3d x_desired = custom_box->positionInWorld("box_base")+Vector3d(0, -0.1, 0.3);
-                walle_x_desired = move(x_desired, Vector3d(0.0, 0, 0));
-                gripper_desired = grasp(true);
-            }
-            else if (state == LEFT_TOCENTER) {
-                Vector3d x_desired = custom_box->positionInWorld("box_base")+Vector3d(0, 0, 0.2);
-                walle_x_desired = move(x_desired, Vector3d(0.0, 0, 0));
-                gripper_desired = grasp(true);
-            }
-            else if (state == RIGHT_REACH) {
-                Vector3d x_desired = custom_box->positionInWorld("flap_right")+Vector3d(0.1, 0.1, 0.15);
-                walle_x_desired = move(x_desired, Vector3d(0.0, 0, 0));
-                gripper_desired = grasp(false);
-            }
-            else if (state == RIGHT_GRASP) {
-                Vector3d x_desired = custom_box->positionInWorld("flap_right")+Vector3d(0.1, 0.2, 0.15);
-                walle_x_desired = move(x_desired, Vector3d(0.0, 0, 0));
-                gripper_desired = grasp(true);
-            }
-            else if (state == RIGHT_RAISE) {
-                Vector3d x_desired = custom_box->positionInWorld("box_base")+Vector3d(0, 0.1, 0.3);
-                walle_x_desired = move(x_desired, Vector3d(0.0, 0, 0));
-                gripper_desired = grasp(true);
-            }
-            else if (state == RIGHT_TOCENTER) {
-                Vector3d x_desired = custom_box->positionInWorld("box_base")+Vector3d(0, 0, 0.2);
-                walle_x_desired = move(x_desired, Vector3d(0.0, 0, 0));
-                gripper_desired = grasp(true);
-            }
-            else {
-                gripper_desired = grasp(false);
-                cout << "Done!" << "\n";
-            }
-
-            walle_pose_task->setGoalPosition(walle_x_desired);
-            walle_gripper_task->setGoalPosition(gripper_desired);
-
-            if (state != LEFT_REACH && state != RIGHT_REACH) {
+            else //Done
+                Vector x_cur = Vector3d (0.0, 0.0, 0.5); //move above workspace when done
+W
+            if (action == REACH) {
+                walle_x_desired = x_cur;
+                walle_pose_task->setGoalPosition(walle_x_desired);
+            } else if (action == SLIP) {
+                // Need force control for this one, need to keep end effector applying force to ground
+                walle_x_desired = x_target;
+                walle_pose_task->setGoalPosition(walle_x_desired);
+                //walle_R_desired = s.t. end effector is flat on the ground & perpendicular to the cur-target line
+                walle_pose_task->setGoalOrientation(walle_R_desired);
+            } else if (action == FLIP) {
+                //Keep end effector position fixed, only change orientation
+                walle_x_desired = x_target;
+                walle_pose_task->setGoalPosition(walle_x_desired);
+                //walle_R_desired = s.t. end effector turns 135 degrees while still being perpendicular to cur-target line
                 walle_pose_task->setGoalOrientation(walle_R_desired);
             }
 
             start = false;
-            if (state <= RIGHT_TOCENTER)
-                cout << "Started state " << state << "\n";
+            if (part <= THIRD2)
+                cout << "Working on " << action << "with " << part << "\n";
+            else
+                cout << "Done!" << "\n";
         }
         else if (walle_pose_task->goalPositionReached(0.01) 
         && walle_pose_task->goalOrientationReached(0.01)
-        && walle_gripper_task->goalPositionReached()
-        && state <= RIGHT_TOCENTER) {
-            cout << "Moving on to next state! Yay!" << "\n";
-            state += 1;
+        && part <= THIRD2) {
+            cout << "Moving on! Yay!" << "\n";
+            action = (action+1)%3;
+            if (action == 0) part += 1;
             start = true;
         }
-        
 
         // update task model
         walle_N_prec.setIdentity();
         walle_pose_task->updateTaskModel(walle_N_prec);
-        walle_gripper_task->updateTaskModel(walle_pose_task->getTaskAndPreviousNullspace());
-        walle_joint_task->updateTaskModel(walle_gripper_task->getTaskAndPreviousNullspace());
+        walle_joint_task->updateTaskModel(walle_pose_task->getTaskAndPreviousNullspace());
 
         // compute torques
-        walle_command_torques = walle_pose_task->computeTorques() + walle_gripper_task->computeTorques() + walle_joint_task->computeTorques();
-
+        walle_command_torques = walle_pose_task->computeTorques() + walle_joint_task->computeTorques();
 
         // send to redis
         redis_client.sendAllFromGroup();
