@@ -3,13 +3,8 @@
 <world name="demo_world" gravity="0.0 0.0 -9.81">
 
 	<robot name="WALLE">
-		<origin xyz="0 -0.30 0" rpy="0 0 0" />
-		<model dir="${CS225A_URDF_FOLDER}/panda" path="panda_arm_hand.urdf" name="panda" />
-	</robot>
-
-	<robot name="EVE">
-		<origin xyz="0 0.30 0" rpy="0 0 0" />
-		<model dir="${CS225A_URDF_FOLDER}/panda" path="panda_arm_hand.urdf" name="panda" />
+		<origin xyz="0 0 0" rpy="0 0 0" />
+		<model dir="${PROJECT_FOLDER}/panda" path="panda_arm_spatula.urdf" name="panda" />
 	</robot>
 
 	<static_object name="Floor">
@@ -31,34 +26,43 @@
 		</collision>
 	</static_object>
 
-	<!-- <dynamic_object name="Box">
-		<origin xyz="0.3 0.0 0.4" rpy="0 0 0" />
-		<inertial>
-			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
-			<mass value="1" />
-			<inertia ixx="0.02" iyy="0.02" izz="0.02" ixy="0" ixz="0" iyz="0" />
-		</inertial>
+	<static_object name="box1">
+		<origin xyz="0.5 0.2 0.01" rpy="0 0 0" />
 		<visual>
 			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 			<geometry>
-				<box size="0.1 0.1 0.1" />
+				<box size="0.02 0.02 0.02" />
 			</geometry>
 			<material name="material_green">
-				<color rgba="0.1 0.5 0.1 1.0" />
+				<color rgba="0.0 0.5 0.1 1.0" />
 			</material>
 		</visual>
-		<collision>
+		<!--<collision>
 			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 			<geometry>
-				<box size="0.1 0.1 0.1" />
+				<box size="5.0 5.0 0.1" />
 			</geometry>
-		</collision>
-	</dynamic_object> -->
+		</collision>-->
+	</static_object>
 
-	<robot name="custom_box">
-    	<origin xyz="0.3 0.0 0.05" rpy="0 0 0"/>
-    	<model dir="${CS225A_URDF_FOLDER}/custom_box" path="custom_box.urdf" name="custom_box"/>
-  	</robot>
+	<static_object name="box2">
+		<origin xyz="0.5 0.1 0.01" rpy="0 0 0" />
+		<visual>
+			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+			<geometry>
+				<box size="0.02 0.02 0.02" />
+			</geometry>
+			<material name="material_green">
+				<color rgba="0.0 0.5 0.1 1.0" />
+			</material>
+		</visual>
+		<!--<collision>
+			<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+			<geometry>
+				<box size="5.0 5.0 0.1" />
+			</geometry>
+		</collision>-->
+	</static_object>
 
 	<light name="light1" type="directional">
 		<position xyz="2.0 -2.0 2.0" />
