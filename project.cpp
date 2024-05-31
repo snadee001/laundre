@@ -49,7 +49,7 @@ using namespace Sai2Primitives;
 using namespace ruckig;
 
 // config file names and object names
-const string robot_file = "${PROJECT_FOLDER}/panda_arm_hand.urdf";
+const string robot_file = "${HW_FOLDER}/laundre/panda_arm_hand.urdf";
 
 Vector2d grasp(bool is_grasp) {
     if (is_grasp) return Vector2d(0.05, -0.05);
@@ -64,6 +64,7 @@ int main(int argc, char** argv) {
     bool start = true;
 
     Sai2Model::URDF_FOLDERS["CS225A_URDF_FOLDER"] = string(CS225A_URDF_FOLDER);
+    Sai2Model::URDF_FOLDERS["HW_FOLDER"] = string(HW_FOLDER);
 
     // set up signal handler
     signal(SIGABRT, &sighandler);
