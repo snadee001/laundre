@@ -49,7 +49,7 @@ using namespace Sai2Primitives;
 using namespace ruckig;
 
 // config file names and object names
-const string robot_file = "${CS225A_URDF_FOLDER}/panda/panda_arm_hand.urdf";
+const string robot_file = "${PROJECT_FOLDER}/panda_arm_hand.urdf";
 
 Vector2d grasp(bool is_grasp) {
     if (is_grasp) return Vector2d(0.05, -0.05);
