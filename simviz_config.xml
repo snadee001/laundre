@@ -28,12 +28,12 @@ and is used to define the prefix of the redis keys used by the interface -->
 
 	<!-- optional. If present, the robotName, linkName and filterCutoff are required. -->
 	<!-- The origin represents the transformation between link frame and sensor frame and defaults to identity -->
-	<!-- <forceSensor>
-		<robotName>Panda</robotName>
+	<forceSensor>
+		<robotName>WALLE</robotName>
 		<linkName>end-effector</linkName>
-		<origin xyz="0 0 0" rpy="0 0 0" />
+		<origin xyz="0.2286 0.0 0.01" rpy="0.0 0.0 0.0" />
 		<filterCutoff>5.0</filterCutoff>
-	</forceSensor> -->
+	</forceSensor>
 
 	<environment>
         <model name="custom_box">
