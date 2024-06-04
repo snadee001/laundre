@@ -6,6 +6,7 @@
 #include <string>
 #include <thread>
 #include <tuple>
+#include <cstdlib>
 
 // sai2 main libraries includes
 #include "Sai2Model.h"
@@ -64,6 +65,25 @@ Matrix3d ori(Vector3d cur, Vector3d target) {
 }
 
 int main(int argc, char** argv) {
+    float camera_height = 0;
+    int vision = 0;
+    while (vision == 0) vision = system("python3 vision.py");
+    ifstream points_file("points.txt");
+    string num;
+    int camera_points[8][2][2]; //Part / cur-target / x-y
+    int i=0, j=0, k=0;
+    if (points_file.is_open()) while(points_file) {
+        points_file >> num;
+        camera_points[i][j][k] = stoi(num);
+
+        k = 1-k;
+        if (k==0) {
+            j = 1-j;
+            if (j==0) i += 1;
+        }
+    }
+    
+    //TODO: Should calibrate x & y in camera frame to world coordinates
 
     int part = LEFT_SLEEVE;
     int action = REACH;
@@ -178,6 +198,10 @@ int main(int argc, char** argv) {
 
         
         if (start) {
+            //After calibrating camera_points, assigning x_cur/x_target will look sth like this:
+            //x_cur = Vector3d(camera_points[part][0][0], camera_points[part][0][0], camera_height);
+            //x_target = Vector3d(camera_points[part][1][0], camera_points[part][1][0], camera_height);
+            
             // x_cur and x_target should be hooked up to CV pipeline & determined
             if (part == LEFT_SLEEVE) {
                 x_cur = Vector3d(0.5, -0.2, 0.0);
