@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from threading import Event
 
+
 # Function to detect shirt by color
 def detect_shirt_by_color(frame, lower_color, upper_color):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -59,6 +60,58 @@ class WebcamProcessor:
         self.event = Event()
         self.start_processing = False
 
+    def process_single_frame(self, frame):
+        lower_color = np.array([35, 100, 100])  # Example lower HSV threshold for green
+        upper_color = np.array([85, 255, 255])  # Example upper HSV threshold for green
+
+        shirt_contour, mask = detect_shirt_by_color(frame, lower_color, upper_color)
+        if shirt_contour is not None:
+            points = {}
+
+            leftbottom = find_left_bottom_corner(mask)
+            points["leftbottom"] = leftbottom
+
+            rightbottom = find_right_bottom_corner(mask)
+            points["rightbottom"] = rightbottom
+
+            left_sleeve_top = find_left_sleeve_top(mask)
+            right_sleeve_top = find_right_sleeve_top(mask)
+            left_sleeve_outer, left_sleeve_inner = find_sleeve(mask, leftbottom, left_sleeve_top)
+            points["left_sleeve_outer"] = left_sleeve_outer
+            points["left_sleeve_inner"] = left_sleeve_inner
+            right_sleeve_outer, right_sleeve_inner = find_sleeve(mask, rightbottom, right_sleeve_top)
+            points["right_sleeve_outer"] = right_sleeve_outer
+            points["right_sleeve_inner"] = right_sleeve_inner
+
+            shirt_height = leftbottom[0] - left_sleeve_top[0]
+            shirt_width = rightbottom[1] - leftbottom[1]
+            leftbottom_target = (int(leftbottom[0] - shirt_height / 6), int(leftbottom[1] + 0.25 * shirt_width))
+            points["leftbottom_target"] = leftbottom_target
+            rightbottom_target = (int(rightbottom[0] - shirt_height / 6), int(rightbottom[1] - 0.25 * shirt_width))
+            points["rightbottom_target"] = rightbottom_target
+            midbottom = (int((leftbottom[0] + rightbottom[0]) / 2), int((leftbottom[1] + rightbottom[1]) / 2))
+            points["midbottom"] = midbottom
+            mid2 = (midbottom[0], midbottom[1])
+            points["mid2"] = mid2
+            mid3 = (int(midbottom[0] - shirt_height / 3), midbottom[1])
+            points["mid3"] = mid3
+            third = (left_sleeve_inner[0], int(left_sleeve_inner[1] + shirt_width / 3))
+            points["third"] = third
+            third2 = (left_sleeve_inner[0], int(left_sleeve_inner[1] + 2 * shirt_width / 3))
+            points["third2"] = third2
+
+            for point in points.values():
+                cv2.circle(frame, (int(point[1]), int(point[0])), 10, (0, 0, 255), -1)
+
+            # Write points to a .txt file
+            with open("points.txt", "w") as file:
+                for key, value in points.items():
+                    file.write(f"{value[0]} {value[1]}\n")
+
+        # Display both the original frame and the mask
+        combined_image = np.hstack((frame, cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)))
+        cv2.imshow('Webcam Frame and Mask', combined_image)
+
     def process_stream(self):
         lower_color = np.array([35, 100, 100])  # Example lower HSV threshold for green
         upper_color = np.array([85, 255, 255])  # Example upper HSV threshold for green
@@ -84,7 +137,8 @@ class WebcamProcessor:
                 points.append(left_sleeve_outer)
                 points.append(left_sleeve_inner)
                 right_sleeve_outer, right_sleeve_inner = find_sleeve(mask, rightbottom, right_sleeve_top)
-                points.append(right_sleeve_outer, right_sleeve_inner)
+                points.append(right_sleeve_outer)
+                points.append(right_sleeve_inner)
 
                 shirt_height = leftbottom[0] - left_sleeve_top[0]
                 shirt_width = rightbottom[1]-leftbottom[1]
@@ -104,7 +158,7 @@ class WebcamProcessor:
                 points.append(third2)
 
                 for point in points:
-                    cv2.circle(frame, (point[1], point[0]), 50, (0, 0, 255), -1)
+                    cv2.circle(frame, (int(point[1]), int(point[0])), 50, (0, 0, 255), -1)
 
             # Display both the original frame and the mask
             combined_image = np.hstack((frame, cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)))
@@ -115,6 +169,8 @@ class WebcamProcessor:
                 break
             elif key == ord('s'):
                 self.start_processing = True
+            elif key == ord('a'):
+                self.process_single_frame(frame)
 
         self.cap.release()
         cv2.destroyAllWindows()
