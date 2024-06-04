@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
 
     // arm task (joints 0-6)
     const string control_link = "end-effector";
-    const Vector3d control_point = Vector3d(0.2286, 0.0, 0.01);
+    const Vector3d control_point = Vector3d(0.195, -0.0, 0.0785);
     Affine3d compliant_frame = Affine3d::Identity();
     compliant_frame.translation() = control_point;
 

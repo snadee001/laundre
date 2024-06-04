@@ -144,20 +144,19 @@
 			<inertia ixx="0.01" iyy="0.01" izz="0.01" ixy="0" ixz="0" iyz="0" />
 		</inertial>
 		<visual>
-			<origin xyz="0.1143 0.0 0.0" rpy="0.0 0.0 0.0"/>
+		<!-- z = -0.0325 is base -->
+			<origin xyz="0.0975 0.0 0.0782" rpy="0.0 0.0 0.0"/>
 			<geometry>
-				<box size="0.2286 0.2286 0.002"/>
-				<sphere radius="0.05"/>
+				<box size="0.195 0.195 0.003"/>
 			</geometry>
 			<material name="material_red">
 				<color rgba="0.6 0.1 0.1 1.0" />
 			</material>
 		</visual>
 		<collision>
-			<origin xyz="0.1143 0.0 0.0" rpy="0.0 0.0 0.0"/>
+			<origin xyz="0.0975 0.0 0.0782" rpy="0.0 0.0 0.0"/>
 			<geometry>
-				<box size="0.2286 0.2286 0.002"/>
-				<sphere radius="0.05"/>
+				<box size="0.195 0.195 0.003"/>
 			</geometry>
 		</collision>
 	</link>
@@ -224,7 +223,7 @@
 		<limit effort="12" lower="-2.8973" upper="2.8973" velocity="2.6100"/>
 	</joint>
 	<joint name="joint_ee" type="fixed">
-		<origin rpy="0 0 0" xyz="0 0 0.14"/>
+		<origin rpy="0 0 -1.57" xyz="0 0 0.14"/>
 		<parent link="link7"/>
 		<child link="end-effector"/>
 	</joint>

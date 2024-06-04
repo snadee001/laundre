@@ -31,7 +31,7 @@ and is used to define the prefix of the redis keys used by the interface -->
 	<forceSensor>
 		<robotName>WALLE</robotName>
 		<linkName>end-effector</linkName>
-		<origin xyz="0.2286 0.0 0.01" rpy="0.0 0.0 0.0" />
+		<origin xyz="0.195 0.0 0.0782" rpy="0.0 0.0 0.0" />
 		<filterCutoff>5.0</filterCutoff>
 	</forceSensor>
 
