@@ -89,15 +89,22 @@ class WebcamProcessor:
                 shirt_height = leftbottom[0] - left_sleeve_top[0]
                 shirt_width = rightbottom[1]-leftbottom[1]
                 leftbottom_target = (int(leftbottom[0]-shirt_height/6), int(leftbottom[1]+0.25*shirt_width))
+                points.append(leftbottom_target)
                 rightbottom_target = (int(rightbottom[0]-shirt_height/6), int(rightbottom[1]-0.25*shirt_width))
+                points.append(rightbottom_target)
                 midbottom = (int((leftbottom[0]+rightbottom[0])/2), int((leftbottom[1]+rightbottom[1])/2))
+                points.append(midbottom)
                 mid2 = (midbottom[0], midbottom[1])
+                points.append(mid2)
                 mid3 = (midbottom[0]-shirt_height/3, midbottom[1])
+                points.append(mid3)
                 third = (left_sleeve_inner[0], left_sleeve_inner[1]+shirt_width/3)
+                points.append(third)
                 third2 = (left_sleeve_inner[0], left_sleeve_inner[1]+2*shirt_width/3)
+                points.append(third2)
 
-                for point in [leftbottom, rightbottom, left_sleeve_outer, left_sleeve_inner, right_sleeve_outer, right_sleeve_inner, leftbottom_target, rightbottom_target, midbottom, mid2, mid3, third, third2]:
-                    cv2.circle(frame, point, 50, (0, 0, 255), -1)
+                for point in points:
+                    cv2.circle(frame, (point[1], point[0]), 50, (0, 0, 255), -1)
 
             # Display both the original frame and the mask
             combined_image = np.hstack((frame, cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)))
