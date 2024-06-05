@@ -53,6 +53,40 @@ using namespace Sai2Primitives;
 // config file names and object names
 const string robot_file = "${HW_FOLDER}/laundre/panda/panda_arm_spatula.urdf";
 
+// Function to calculate barycentric weights
+tuple<double, double, double, double> barycentric_weights(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4, double xn, double yn) {
+    double area = [](double x1, double y1, double x2, double y2, double x3, double y3) {
+        return 0.5 * abs(x1*(y2 - y3) + x2*(y3 - y1) + x3*(y1 - y2));
+    };
+
+    double A = area(x1, y1, x2, y2, x3, y3) + area(x1, y1, x3, y3, x4, y4);
+    double A1 = area(xn, yn, x2, y2, x3, y3) + area(xn, yn, x3, y3, x4, y4);
+    double A2 = area(x1, y1, xn, yn, x3, y3) + area(x1, y1, x3, y3, x4, y4);
+    double A3 = area(x1, y1, x2, y2, xn, yn) + area(x1, y1, xn, yn, x4, y4);
+    double A4 = area(x1, y1, x2, y2, x3, y3) + area(x1, y1, x3, y3, xn, yn);
+
+    double lambda1 = A1 / A;
+    double lambda2 = A2 / A;
+    double lambda3 = A3 / A;
+    double lambda4 = A4 / A;
+
+    return make_tuple(lambda1, lambda2, lambda3, lambda4);
+}
+
+// Function to convert camera frame points to robot frame points
+Vector3d camera_to_robot_frame(int x, int y, float camera_height) {
+    float scale_x = 0.01; // Example scale factor for x-axis
+    float scale_y = 0.01; // Example scale factor for y-axis
+    float offset_x = 0.5; // Example offset for x-axis
+    float offset_y = 0.0; // Example offset for y-axis
+
+    double robot_x = x * scale_x + offset_x;
+    double robot_y = y * scale_y + offset_y;
+    double robot_z = camera_height;
+
+    return Vector3d(robot_x, robot_y, robot_z);
+}
+
 Matrix3d ori(Vector3d cur, Vector3d target) {
     Matrix3d result = Matrix3d::Zero();
     result(2, 2) = -1.0;

@@ -61,8 +61,11 @@ class WebcamProcessor:
         self.start_processing = False
 
     def process_single_frame(self, frame):
-        lower_color = np.array([35, 100, 100])  # Example lower HSV threshold for green
-        upper_color = np.array([85, 255, 255])  # Example upper HSV threshold for green
+        #lower_color = np.array([35, 100, 100])  # Example lower HSV threshold for green
+        #upper_color = np.array([85, 255, 255])  # Example upper HSV threshold for green
+
+        lower_color = np.array([0, 150, 150])  # Example lower HSV threshold for red
+        upper_color = np.array([25, 230, 255])  # Example upper HSV threshold for red
 
         shirt_contour, mask = detect_shirt_by_color(frame, lower_color, upper_color)
         if shirt_contour is not None:
@@ -128,8 +131,11 @@ class WebcamProcessor:
         cv2.imshow('Webcam Frame and Mask', combined_image)
 
     def process_stream(self):
-        lower_color = np.array([35, 100, 100])  # Example lower HSV threshold for green
-        upper_color = np.array([85, 255, 255])  # Example upper HSV threshold for green
+        # lower_color = np.array([35, 100, 100])  # Example lower HSV threshold for green
+        # upper_color = np.array([85, 255, 255])  # Example upper HSV threshold for green
+
+        lower_color = np.array([0, 150, 150])  # Example lower HSV threshold for red
+        upper_color = np.array([25, 230, 255])  # Example upper HSV threshold for red
 
         while self.cap.isOpened():
             ret, frame = self.cap.read()
