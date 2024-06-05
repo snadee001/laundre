@@ -68,7 +68,7 @@ def find_sleeve(mask, bottom, sleeve_top):
 
 def projection(green_mask, markers):
     width, height = green_mask.shape
-    dest_markers = np.float32([[0,0], [0, height], [0.9*width, height], [0.9*width, 0]]) #0.8 based on measurement
+    dest_markers = np.float32([[0,height], [0.9*width, height], [0.9*width, 0], [0, 0]])
     M = cv2.getPerspectiveTransform(np.float32(markers), dest_markers)
     return cv2.warpPerspective(green_mask, M, (width, height))
 
@@ -92,10 +92,10 @@ def barycentric_weights(x1, y1, x2, y2, x3, y3, x4, y4, xn, yn):
 
 def convert_to_world_coords(mask, point):
     width, height = mask.shape
-    x1, y1 = 0, 0
-    x2, y2 = 0, height
-    x3, y3 = 0.9*width, height
-    x4, y4 = 0.9*width, 0
+    x1, y1 = 0, height
+    x2, y2 = 0.9*width, height
+    x3, y3 = 0.9*width, 0
+    x4, y4 = 0, 0
 
     physical_points = np.array([[0.252, -0.527], [0.252, 0.463], [0.925, 0.463], [0.925, -0.527]])
     weights = barycentric_weights(x1, y1, x2, y2, x3, y3, x4, y4, point[0], point[1])
@@ -163,8 +163,11 @@ class WebcamProcessor:
                 for point in points:
                     cv2.circle(mask, (int(point[1]), int(point[0])), 50, (0, 0, 255), -1)
 
-            # Display both the original frame and the mask
-            combined_image = np.hstack((frame, cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)))
+                # Display both the original frame and the mask
+                combined_image = np.hstack((frame, cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)))
+            else:
+                combined_image = frame
+
             cv2.imshow('Webcam Frame and Mask', combined_image)
 
             key = cv2.waitKey(1)
