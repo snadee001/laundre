@@ -65,16 +65,16 @@ Matrix3d ori(Vector3d cur, Vector3d target) {
 }
 
 int main(int argc, char** argv) {
-    float camera_height = 0;
+    float camera_height = 0.08;
     int vision = 0;
     while (vision == 0) vision = system("python3 vision.py");
-    ifstream points_file("points.txt");
+    ifstream points_file("points.txt"); //Calibrated xy coordinates in robot base frame
     string num;
-    int camera_points[8][2][2]; //Part / cur-target / x-y
+    int points[8][2][2]; //Part / cur-target / x-y
     int i=0, j=0, k=0;
     if (points_file.is_open()) while(points_file) {
         points_file >> num;
-        camera_points[i][j][k] = stoi(num);
+        points[i][j][k] = stoi(num);
 
         k = 1-k;
         if (k==0) {
@@ -82,8 +82,6 @@ int main(int argc, char** argv) {
             if (j==0) i += 1;
         }
     }
-    
-    //TODO: Should calibrate x & y in camera frame to world coordinates
 
     int part = LEFT_SLEEVE;
     int action = REACH;
@@ -198,36 +196,11 @@ int main(int argc, char** argv) {
 
         
         if (start) {
-            //After calibrating camera_points, assigning x_cur/x_target will look sth like this:
-            //x_cur = Vector3d(camera_points[part][0][0], camera_points[part][0][0], camera_height);
-            //x_target = Vector3d(camera_points[part][1][0], camera_points[part][1][0], camera_height);
-            
-            // x_cur and x_target should be hooked up to CV pipeline & determined
-            if (part == LEFT_SLEEVE) {
-                x_cur = Vector3d(0.5, -0.2, 0.0);
-                x_target = Vector3d(0.5, -0.1, 0.0);
-            } else if (part == RIGHT_SLEEVE) {
-                x_cur = Vector3d(0.5, 0.2, 0.0);
-                x_target = Vector3d(0.5, 0.1, 0.0);
-            } else if (part == BOTTOM_LEFT) {
-                x_cur = Vector3d(0.5, 0.2, 0.0);
-                x_target = Vector3d(0.5, 0.1, 0.0);
-            } else if (part == BOTTOM_RIGHT) {
-                x_cur = Vector3d(0.5, 0.2, 0.0);
-                x_target = Vector3d(0.5, 0.1, 0.0);
-            } else if (part == BOTTOM) {
-                x_cur = Vector3d(0.5, 0.2, 0.0);
-                x_target = Vector3d(0.5, 0.1, 0.0);
-            } else if (part == BOTTOM2) {
-                x_cur = Vector3d(0.5, 0.2, 0.0);
-                x_target = Vector3d(0.5, 0.1, 0.0);
-            } else if (part == THIRD) {
-                x_cur = Vector3d(0.5, 0.2, 0.0);
-                x_target = Vector3d(0.5, 0.1, 0.0);
-            } else if (part == THIRD2) {
-                x_cur = Vector3d(0.5, 0.2, 0.0);
-                x_target = Vector3d(0.5, 0.1, 0.0);
-            } else {
+            if (part <= THIRD2) {
+                x_cur = Vector3d(points[part][0][0], points[part][0][0], camera_height);
+                x_target = Vector3d(points[part][1][0], points[part][1][0], camera_height);
+            }
+            else {
                 x_cur = Vector3d(0.0, 0.0, 0.2); // move above workspace when done
                 x_target = Vector3d(0.1, 0.0, 0.2);
             }
