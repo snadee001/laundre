@@ -1,0 +1,1 @@
+/usr/bin/c++    -rdynamic CMakeFiles/hw1.dir/hw1.o  -o /hw1/hw1 

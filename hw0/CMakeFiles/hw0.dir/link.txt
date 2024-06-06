@@ -1,0 +1,1 @@
+/usr/bin/c++    -rdynamic CMakeFiles/hw0.dir/hw0.o  -o /hw0/hw0 

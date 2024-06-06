@@ -52,7 +52,6 @@ using namespace Sai2Primitives;
 
 // config file names and object names
 const string robot_file = "${HW_FOLDER}/laundre/panda/panda_arm_spatula.urdf";
-const bool flag_simulation = false;
 
 Matrix3d ori(Vector3d cur, Vector3d target) {
     Matrix3d result = Matrix3d::Zero();
@@ -66,15 +65,9 @@ Matrix3d ori(Vector3d cur, Vector3d target) {
 }
 
 int main(int argc, char** argv) {
-    // set up signal handler
-    signal(SIGABRT, &sighandler);
-    signal(SIGTERM, &sighandler);
-    signal(SIGINT, &sighandler); 
-
-
     float camera_height = 0.08;
-    //int vision = 0;
-    //while (vision == 0) vision = system("python3 vision.py");
+    int vision = 0;
+    while (vision == 0) vision = system("python3 vision.py");
     ifstream points_file("points.txt"); //Calibrated xy coordinates in robot base frame
     string num;
     int points[8][2][2]; //Part / cur-target / x-y
@@ -96,6 +89,11 @@ int main(int argc, char** argv) {
 
     Sai2Model::URDF_FOLDERS["CS225A_URDF_FOLDER"] = string(CS225A_URDF_FOLDER);
     Sai2Model::URDF_FOLDERS["HW_FOLDER"] = string(HW_FOLDER);
+
+    // set up signal handler
+    signal(SIGABRT, &sighandler);
+    signal(SIGTERM, &sighandler);
+    signal(SIGINT, &sighandler);
 
     // load robots
     auto walle = std::make_shared<Sai2Model::Sai2Model>(robot_file);
@@ -138,32 +136,14 @@ int main(int argc, char** argv) {
     auto redis_client = Sai2Common::RedisClient();
     redis_client.connect();
 
-    // set up signal handler
-    signal(SIGABRT, &sighandler);
-    signal(SIGTERM, &sighandler);
-    signal(SIGINT, &sighandler);
-
-    std::string MASSMATRIX_KEY = "sai2::FrankaPanda::Clyde::sensors::model::massmatrix"; 
-
-	// keys 
-	if (!flag_simulation) {
-		JOINT_TORQUES_COMMANDED_WALLE_KEY = "sai2::FrankaPanda::Clyde::actuators::fgc";
-		JOINT_ANGLES_WALLE_KEY = "sai2::FrankaPanda::Clyde::sensors::q";
-		JOINT_VELOCITIES_WALLE_KEY = "sai2::FrankaPanda::Clyde::sensors::dq";
-		//MASSMATRIX_KEY = "sai2::FrankaPanda::Clyde::sensors::model::massmatrix";  // NEED TO MAKE THIS
-		//GRAVITY_COMP_ENABLED_KEY = "sai2::FrankaPanda::Clyde::sensors::model::robot_gravity";
-	}
-
     // setup send and receive groups
     VectorXd walle_q = redis_client.getEigen(JOINT_ANGLES_WALLE_KEY);
     VectorXd walle_dq = redis_client.getEigen(JOINT_VELOCITIES_WALLE_KEY);
-    MatrixXd mass_matrix = redis_client.getEigen(MASSMATRIX_KEY);
     redis_client.addToReceiveGroup(JOINT_ANGLES_WALLE_KEY, walle_q);
     redis_client.addToReceiveGroup(JOINT_VELOCITIES_WALLE_KEY, walle_dq);
-    redis_client.addToReceiveGroup(MASSMATRIX_KEY, mass_matrix);
 
     redis_client.addToSendGroup(JOINT_TORQUES_COMMANDED_WALLE_KEY, walle_command_torques);
-    //redis_client.addToSendGroup(GRAVITY_COMP_ENABLED_KEY, gravity_comp_enabled);
+    redis_client.addToSendGroup(GRAVITY_COMP_ENABLED_KEY, gravity_comp_enabled);
 
     redis_client.receiveAllFromGroup();
     redis_client.sendAllFromGroup();
@@ -171,19 +151,7 @@ int main(int argc, char** argv) {
     // update robot model from simulation configuration
     walle->setQ(walle_q);
     walle->setDq(walle_dq);
-
-    if (!flag_simulation) {
-        cout << "creating mass matrix" << endl;
-        MatrixXd M = redis_client.getEigen(MASSMATRIX_KEY);
-        M(4, 4) += 0.2;
-        M(5, 5) += 0.2;
-        M(6, 6) += 0.2;
-        walle->updateModel(M);
-    }
-
-    else {
-        walle->updateModel();
-    }
+    walle->updateModel();
 
     // record initial configuration
     VectorXd initial_walle_q = walle->q();
@@ -202,101 +170,89 @@ int main(int argc, char** argv) {
     while (runloop) {
         // wait for next scheduled loop
         timer.waitForNextLoop();
-        double time = timer.elapsedSimTime();
+        double time = timer.elapsedTime();
 
         // read robot state from redis
         redis_client.receiveAllFromGroup();
-
-        if (!flag_simulation) {
-            cout << "here" << endl;
-            walle_q.head(7) = redis_client.getEigen(JOINT_ANGLES_WALLE_KEY);
-            walle_dq.head(7) = redis_client.getEigen(JOINT_VELOCITIES_WALLE_KEY);
-        }
-        else {
-            walle_q = redis_client.getEigen(JOINT_ANGLES_WALLE_KEY);
-            walle_dq = redis_client.getEigen(JOINT_VELOCITIES_WALLE_KEY);
-        }
-
         walle->setQ(walle_q);
         walle->setDq(walle_dq);
-
-        if (!flag_simulation) {
-            cout << "creating mass matrix" << endl;
-            MatrixXd M = redis_client.getEigen(MASSMATRIX_KEY);
-            M(4, 4) += 0.2;
-            M(5, 5) += 0.2;
-            M(6, 6) += 0.2;
-            walle->updateModel(M);
-
-        } else {
-            cout << "updates model in else statement" << endl;
-            walle->updateModel();
-        }
+        walle->updateModel();
 
         walle_ee_pos = walle->position(control_link, control_point);
         walle_ee_ori = walle->rotation(control_link);
-        Matrix3d walle_R_desired = walle_ee_ori;
-        Vector3d walle_x_desired = walle_ee_pos;
 
+        Matrix3d walle_R_desired = walle_ee_ori;
+        Matrix3d rotation135;
+        rotation135 <<
+            sqrt(2.0)/-2.0, 0.0, sqrt(2.0)/-2.0,
+            0.0, 1.0, 0.0,
+            sqrt(2.0)/2.0, 0, sqrt(2.0)/-2.0;
+
+        Vector3d walle_x_desired = walle_ee_pos;
 
         Matrix3d ee_ori_world;
         Matrix3d box_ori = Matrix3d::Zero();
         Vector3d x_cur, x_target;
 
-        cout << "start's value: " << start << endl;
-        cout << "reach's value: " << REACH << endl;
+        
+        if (start) {
+            if (part <= THIRD2) {
+                x_cur = Vector3d(points[part][0][0], points[part][0][0], camera_height);
+                x_target = Vector3d(points[part][1][0], points[part][1][0], camera_height);
+            }
+            else {
+                x_cur = Vector3d(0.0, 0.0, 0.2); // move above workspace when done
+                x_target = Vector3d(0.1, 0.0, 0.2);
+            }
 
+            if (action == REACH) {
+                walle_pose_task->setGoalPosition(x_cur);
+                walle_pose_task->setGoalOrientation(ori(x_cur, x_target));
+            } else if (action == SLIP) {
+                walle_pose_task->parametrizeForceMotionSpaces(
+					1, Vector3d::UnitZ());
 
-        cout << "entered start" << endl;
-        x_cur =  Vector3d(0.389199, -0.213982, 0.053225);
-        x_target = Vector3d(0.393358, -0.0362783, 0.0725647);
-        Matrix3d ori_cur;
-        Matrix3d ori_target; 
-        ori_cur << 0.979439, 0.187027, 0.0756338,
-        0.200865, -0.869147, -0.451926, 
-        -0.0187854, 0.457826, -0.888844;
+				// set the force control 
+				walle_pose_task->setGoalForce(-1.0 * Vector3d::UnitZ());
 
-        ori_target << 0.0321804, -0.963101, -0.26721,
-        -0.536335, -0.242236, 0.808496,
-        -0.843392, 0.117296, -0.52434;
+				walle_pose_task->setForceControlGains(0.7, 5.0, 1.5);
 
+                walle_pose_task->setGoalPosition(x_target);
+                walle_pose_task->setGoalOrientation(ori(x_cur, x_target));
+            } else if (action == FLIP) {
+                // Keep end effector position fixed, only change orientation
+                walle_pose_task->setGoalPosition(x_target);
+                walle_pose_task->setGoalOrientation(walle_ee_ori * rotation135 * walle_ee_ori.inverse() * ori(x_cur, x_target));
+            } else if (action == RISE) {
+                walle_pose_task->parametrizeForceMotionSpaces(0);
+                walle_pose_task->setGoalPosition(x_target + Vector3d(0, 0, 0.3));
+            }
 
-        cout << "entered reach" << endl;
-        walle_pose_task->setGoalPosition(x_target);
-        walle_pose_task->setGoalOrientation(ori_target);
-
+            start = false;
+            if (part <= THIRD2) {
+                cout << "Working on action " << action << " with part " << part << "\n";
+            } else {
+                cout << "Done!" << "\n";
+            }
+        } else if (walle_pose_task->goalPositionReached(0.01) && walle_pose_task->goalOrientationReached(0.01) && part <= THIRD2) {
+            cout << "Moving on! Yay!" << "\n";
+            action = (action + 1) % 4;
+            if (action == 0) part += 1;
+            start = true;
+        }
 
         // update task model
-        cout << "EXIT" << endl;
         walle_N_prec.setIdentity();
         walle_pose_task->updateTaskModel(walle_N_prec);
         walle_joint_task->updateTaskModel(walle_pose_task->getTaskAndPreviousNullspace());
 
         // compute torques
-        cout << "command torques BEFORE" << "\n";
-        cout << walle_command_torques << "\n";
-        cout << "currentposition AFTER" << "\n";
-        cout << walle_ee_pos << "\n";
-
         walle_command_torques = walle_joint_task->computeTorques() + walle_pose_task->computeTorques();
-
-        cout << "command torques AFTER" << "\n";
-        cout << walle_command_torques << "\n";
-        cout << "currentposition AFTER" << "\n";
-        cout << walle_ee_pos << "\n";
-
-        
 
         // send to redis
         redis_client.sendAllFromGroup();
-        cout << "sent it to redis" << endl;
-
-        //redis_client.setEigen(JOINT_TORQUES_COMMANDED_WALLE_KEY, walle_command_torques);
-        start = false;
-
     }
 
-    cout << "reached outside" << endl;
     walle_command_torques.setZero();
     gravity_comp_enabled = true;
     redis_client.sendAllFromGroup();

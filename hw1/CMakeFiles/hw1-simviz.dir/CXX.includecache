@@ -1,0 +1,14 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/clyde/cs225a/homework/hw1/hw1-simviz.cpp
+simviz/SimVizRedisInterface.h
+/home/clyde/cs225a/homework/hw1/simviz/SimVizRedisInterface.h
+simviz/SimVizConfigParser.h
+/home/clyde/cs225a/homework/hw1/simviz/SimVizConfigParser.h
+

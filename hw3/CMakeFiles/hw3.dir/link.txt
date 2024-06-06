@@ -1,0 +1,1 @@
+/usr/bin/c++    -rdynamic CMakeFiles/hw3.dir/hw3.o  -o /hw3/hw3 

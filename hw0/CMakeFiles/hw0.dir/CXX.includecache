@@ -1,0 +1,34 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/clyde/cs225a/homework/hw0/hw0.cpp
+math.h
+-
+iostream
+-
+fstream
+-
+mutex
+-
+string
+-
+thread
+-
+Sai2Model.h
+/home/clyde/cs225a/homework/hw0/Sai2Model.h
+timer/LoopTimer.h
+/home/clyde/cs225a/homework/hw0/timer/LoopTimer.h
+redis/RedisClient.h
+/home/clyde/cs225a/homework/hw0/redis/RedisClient.h
+redis_keys.h
+/home/clyde/cs225a/homework/hw0/redis_keys.h
+signal.h
+-
+
+/home/clyde/cs225a/homework/hw0/redis_keys.h
+
