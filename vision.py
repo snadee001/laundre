@@ -68,9 +68,10 @@ def find_sleeve(mask, bottom, sleeve_top):
 
 def projection(green_mask, markers):
     width, height = green_mask.shape
-    dest_markers = np.float32([[0,height], [0.9*width, height], [0.9*width, 0], [0, 0]])
+    #dest_markers = np.float32([[0.1*height,0.05*width], [0.1*height, 0.9*width], [0.9*height, 0.9*width], [0.9*height, 0.05*width]])
+    dest_markers = np.float32([[0.0*height,0.0*width], [0.0*height, 1.0*width], [1.0*height, 1.0*width], [1.0*height, 0.0*width]])
     M = cv2.getPerspectiveTransform(np.float32(markers), dest_markers)
-    return cv2.warpPerspective(green_mask, M, (width, height))
+    return cv2.warpPerspective(green_mask, M, (height, width))
 
 def barycentric_weights(x1, y1, x2, y2, x3, y3, x4, y4, xn, yn):
     def area(x1, y1, x2, y2, x3, y3):
@@ -123,6 +124,9 @@ class WebcamProcessor:
             ret, frame = self.cap.read()
             if not ret:
                 break
+            
+            frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+            frame = frame[400:1380, :1000]
 
             if self.start_processing:
                 mask_red = detect_by_color(frame, lower_color_red, upper_color_red)
@@ -146,12 +150,12 @@ class WebcamProcessor:
 
                 shirt_height = leftbottom[0] - left_sleeve_top[0]
                 shirt_width = rightbottom[1]-leftbottom[1]
-                leftbottom_target = (int(leftbottom[0]-shirt_height/6), int(leftbottom[1]+0.25*shirt_width))
-                rightbottom_target = (int(rightbottom[0]-shirt_height/6), int(rightbottom[1]-0.25*shirt_width))
+                leftbottom_target = (int(leftbottom[0]-shirt_height/5), int(leftbottom[1]+0.25*shirt_width))
+                rightbottom_target = (int(rightbottom[0]-shirt_height/5), int(rightbottom[1]-0.25*shirt_width))
 
                 midbottom = (int((leftbottom[0]+rightbottom[0])/2), int((leftbottom[1]+rightbottom[1])/2))
-                mid2 = (midbottom[0], midbottom[1])
-                mid3 = (midbottom[0]-shirt_height/3, midbottom[1])
+                mid2 = (midbottom[0]-shirt_height/3, midbottom[1])
+                mid3 = (midbottom[0]-2*shirt_height/3, midbottom[1])
 
                 third = (left_sleeve_inner[0], left_sleeve_inner[1]+shirt_width/3)
                 third2 = (left_sleeve_inner[0], left_sleeve_inner[1]+2*shirt_width/3)
@@ -161,7 +165,8 @@ class WebcamProcessor:
                             mid2, mid2, mid3, left_sleeve_inner, third, third, third2]
 
                 for point in points:
-                    cv2.circle(mask, (int(point[1]), int(point[0])), 50, (0, 0, 255), -1)
+                    cv2.circle(frame, (int(point[1]), int(point[0])), 25, (0, 0, 255), -1)
+                    cv2.circle(mask, (int(point[1]), int(point[0])), 25, (0, 0, 255), -1)
 
                 # Display both the original frame and the mask
                 combined_image = np.hstack((frame, cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)))
