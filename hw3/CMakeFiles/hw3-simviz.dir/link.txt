@@ -1,1 +1,0 @@
-/usr/bin/c++    -rdynamic CMakeFiles/hw3-simviz.dir/hw3-simviz.o  -o /hw3/hw3-simviz 

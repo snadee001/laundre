@@ -1,1 +1,0 @@
-/usr/bin/c++    -rdynamic CMakeFiles/hw0-viz.dir/hw0-viz.o  -o /hw0/hw0-viz 

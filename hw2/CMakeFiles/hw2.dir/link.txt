@@ -1,1 +1,0 @@
-/usr/bin/c++    -rdynamic CMakeFiles/hw2.dir/hw2.o  -o /hw2/hw2 

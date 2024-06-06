@@ -1,1 +1,0 @@
-/usr/bin/c++    -rdynamic CMakeFiles/hw1-simviz.dir/hw1-simviz.o  -o /hw1/hw1-simviz 
