@@ -137,26 +137,50 @@
 			</geometry>
 		</collision> -->
 	</link>
+	<link name="intermediate-end-effector">
+		<inertial>
+			<origin xyz="0 0 0" rpy="0 0 0" />
+			<mass value="0.1" />
+			<inertia ixx="0.01" iyy="0.01" izz="0.01" ixy="0" ixz="0" iyz="0" />
+		</inertial>
+		<!-- <visual>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<box size="0.2 0.1 0.05"/>
+			</geometry>
+			<material name="material_red">
+				<color rgba="1 0 0 1"/>
+			</material>
+		</visual> -->
+	</link>
 	<link name="end-effector">
 		<inertial>
-			<origin xyz="0 0 0" rpy="0 -0 0" />
+			<origin xyz="0 0 0" rpy="0 0 0" />
 			<mass value="0.2" />
 			<inertia ixx="0.01" iyy="0.01" izz="0.01" ixy="0" ixz="0" iyz="0" />
 		</inertial>
-		<visual>
-		<!-- z = -0.0325 is base -->
-			<origin xyz="0.0975 0.0 0.0782" rpy="0.0 0.0 0.0"/>
+		<!-- <visual>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
 			<geometry>
-				<box size="0.195 0.195 0.003"/>
+				<box size="0.2 0.1 0.05"/>
 			</geometry>
-			<material name="material_red">
-				<color rgba="0.6 0.1 0.1 1.0" />
+			<material name="material_green">
+				<color rgba="0 1 0 1"/>
+			</material>
+		</visual> -->
+		<visual>
+			<origin xyz="-0.10595 0 0" rpy="0 0 0"/>
+			<geometry>
+				<box size="0.2119 0.2032 0.0032"/>
+			</geometry>
+			<material name="material_green">
+				<color rgba="0 1 0 1"/>
 			</material>
 		</visual>
 		<collision>
-			<origin xyz="0.0975 0.0 0.0782" rpy="0.0 0.0 0.0"/>
+			<origin xyz="-0.10595 0 0" rpy="0 0 0"/>
 			<geometry>
-				<box size="0.195 0.195 0.003"/>
+				<box size="0.2119 0.2032 0.0032"/>
 			</geometry>
 		</collision>
 	</link>
@@ -223,8 +247,15 @@
 		<limit effort="12" lower="-2.8973" upper="2.8973" velocity="2.6100"/>
 	</joint>
 	<joint name="joint_ee" type="fixed">
-		<origin rpy="0 0 -1.57" xyz="0 0 0.14"/>
+	<!-- z = 0.1075 is base -->
+		<origin rpy="0 0 -0.785" xyz="0 0 0.2794"/>
 		<parent link="link7"/>
+		<child link="intermediate-end-effector"/>
+	</joint>
+	<joint name="joint_ee_2" type="fixed">
+	<!-- z = 0.1075 is base -->
+		<origin rpy="0 3.925 0" xyz="-0.0963 0 0"/>
+		<parent link="intermediate-end-effector"/>
 		<child link="end-effector"/>
 	</joint>
 </robot>
