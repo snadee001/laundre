@@ -66,36 +66,10 @@ def find_sleeve(mask, bottom, sleeve_top):
     sleeve_mid_inner = (x_mid, bottom[1])
     return sleeve_mid_outer, sleeve_mid_inner
 
-def order_points(pts):
-    # sort the points based on their x-coordinates
-    xSorted = pts[np.argsort(pts[:, 0]), :]
-    # grab the left-most and right-most points from the sorted
-    # x-roodinate points
-    leftMost = xSorted[:2, :]
-    rightMost = xSorted[2:, :]
-    # now, sort the left-most coordinates according to their
-    # y-coordinates so we can grab the top-left and bottom-left
-    # points, respectively
-    leftMost = leftMost[np.argsort(leftMost[:, 1]), :]
-    (tl, bl) = leftMost
-    # now that we have the top-left coordinate, use it as an
-    # anchor to calculate the Euclidean distance between the
-    # top-left and right-most points; by the Pythagorean
-    # theorem, the point with the largest distance will be
-    # our bottom-right point
-    D = dist.cdist(tl[np.newaxis], rightMost, "euclidean")[0]
-    (br, tr) = rightMost[np.argsort(D)[::-1], :]
-    # return the coordinates in top-left, top-right,
-    # bottom-right, and bottom-left order
-    return np.array([tl, tr, br, bl], dtype="float32")
-
-def projection(green_mask, markers):
+def projection(green_mask, markers, dest_markers):
     width, height = green_mask.shape
-    markers = order_points(np.array(markers))
-    #dest_markers = np.float32([[0,0.0*width], [0.0*height, 0.7*width], [0.9*height, width], [0.7*height, 0.0*width]])
-    dest_markers = np.float32([[0,0], [1.0*height, 0.0*width], [height, width], [0.0*height, 1.0*width]])
-    M = cv2.getPerspectiveTransform(markers, dest_markers)
-    return cv2.warpAffine(green_mask, M, (height, width))
+    M = cv2.getPerspectiveTransform(np.float32(markers), dest_markers)
+    return cv2.warpPerspective(green_mask, M, (height, width), flags=cv2.INTER_NEAREST)
 
 def barycentric_weights(x1, y1, x2, y2, x3, y3, x4, y4, xn, yn):
     def area(x1, y1, x2, y2, x3, y3):
@@ -116,11 +90,11 @@ def barycentric_weights(x1, y1, x2, y2, x3, y3, x4, y4, xn, yn):
     return np.array([lambda1, lambda2, lambda3, lambda4])
 
 def convert_to_world_coords(mask, point):
-    width, height = mask.shape
-    x1, y1 = 0, height
-    x2, y2 = 0.9*width, height
-    x3, y3 = 0.9*width, 0
-    x4, y4 = 0, 0
+    width, height, _ = mask.shape
+    x1, y1 = 0.0, 0.0
+    x2, y2 = 0.0, 1.0*height
+    x3, y3 = 1.0*width, 1.0*height
+    x4, y4 = 1.0*width, 0.0*height
 
     physical_points = np.array([[0.252, -0.527], [0.252, 0.463], [0.925, 0.463], [0.925, -0.527]])
     weights = barycentric_weights(x1, y1, x2, y2, x3, y3, x4, y4, point[0], point[1])
@@ -130,12 +104,6 @@ def convert_to_world_coords(mask, point):
         world_coord += physical_points[i]*weights[i]
     
     return world_coord
-
-def get_rgb(event, x, y, flags, param):
-    global clicked_rgb
-    if event == cv2.EVENT_LBUTTONDOWN:
-        clicked_rgb = param[y, x, :]
-        print(f"Clicked pixel RGB values: {clicked_rgb}")
 
 class WebcamProcessor:
     def __init__(self):
@@ -154,10 +122,6 @@ class WebcamProcessor:
             ret, frame = self.cap.read()
             if not ret:
                 break
-            
-            cv2.namedWindow('Webcam Frame')
-            cv2.setMouseCallback('Webcam Frame', get_rgb, frame)
-
             frame = frame[:1000, :1100]
             frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
             frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
@@ -173,7 +137,9 @@ class WebcamProcessor:
 
 
                 mask = detect_by_color(frame, lower_color, upper_color)
-                mask = projection(mask, points_red)
+                width, height = mask.shape
+                dest_markers = np.float32([[0.0, 0.0], [0.0, 1.0*height], [1.0*width, 1.0*height], [1.0*width, 0.0*height]])
+                mask = projection(mask, points_red, dest_markers)
 
                 leftbottom = find_left_bottom_corner(mask)
                 rightbottom = find_right_bottom_corner(mask)
@@ -192,21 +158,24 @@ class WebcamProcessor:
                 mid2 = (int(midbottom[0]-shirt_height/3), midbottom[1])
                 mid3 = (int(midbottom[0]-2*shirt_height/3), midbottom[1])
 
-                third = (left_sleeve_inner[0], left_sleeve_inner[1]+shirt_width/3)
-                third2 = (left_sleeve_inner[0], left_sleeve_inner[1]+2*shirt_width/3)
+                third = (left_sleeve_inner[0], int(left_sleeve_inner[1]+shirt_width/3))
+                third2 = (left_sleeve_inner[0], int(left_sleeve_inner[1]+2*shirt_width/3))
 
                 points = [left_sleeve_outer, left_sleeve_inner, right_sleeve_outer, right_sleeve_inner, \
                           leftbottom, leftbottom_target, rightbottom, rightbottom_target, midbottom, \
                             mid2, mid2, mid3, left_sleeve_inner, third, third, third2]
 
+                mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
                 for point in points:
                     cv2.circle(mask, (int(point[1]), int(point[0])), 25, (0, 0, 255), -1)
-                    cv2.circle(frame, (int(point[1]), int(point[0])), 25, (0, 0, 255), -1)
                 for i in range(len(points_red)):
                     cv2.circle(frame, (int(points_red[i][1]), int(points_red[i][0])), 25, (255, 70*i, 0), -1)
+                for i in range(len(dest_markers)):
+                    cv2.circle(mask, (int(dest_markers[i][1]), int(dest_markers[i][0])), 25, (70*i, 255, 0), -1)
 
                 # Display both the original frame and the mask
-                combined_image = np.hstack((frame, cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)))
+                combined_image = np.hstack((frame, mask))
+                #combined_image = mask
             else:
                 combined_image = frame
 
@@ -223,6 +192,7 @@ class WebcamProcessor:
                         #change to robot base frame w/ barycentric first
                         point = convert_to_world_coords(mask, point)
                         file.write(f"{point[0]} {point[1]}\n")
+                        return 0
 
         self.cap.release()
         cv2.destroyAllWindows()

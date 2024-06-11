@@ -4,7 +4,7 @@
 
 	<robot name="WALLE">
 		<origin xyz="0 0 0" rpy="0 0 0" />
-		<model dir="${PROJECT_FOLDER}/panda" path="panda_arm_spatula.urdf" name="panda" />
+		<model dir="${HW_FOLDER}/laundre/panda" path="panda_arm_spatula.urdf" name="panda" />
 	</robot>
 
 	<static_object name="Floor">
